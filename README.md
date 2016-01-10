@@ -1,5 +1,9 @@
 # Caribou - An Exercise in Infrastructure-as-Code
 
-Will add more later.
+##Requirements
+* AWS SDK for Ruby v2
+
+##Notes
+* Currently uses Aws.use_bundled_cert! for an easy way to work on Windows.
 
 *The entirety of this project is covered by the [GNU General Public License, Version 3](http://www.gnu.org/licenses/gpl-3.0.txt)*
