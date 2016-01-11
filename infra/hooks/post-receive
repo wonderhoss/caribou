@@ -2,8 +2,6 @@
 #post receive
 
 require 'fileutils'
-#require 'mkmf'
-require 'pathname'
 require 'yaml'
 
 unless File.exists?('hooks/config.yaml')
@@ -46,8 +44,7 @@ if (@new =~ /^0*$/)
     exit 1
   end
 
-  current_release = Pathname.new("#{@TO_DIR}/latest").realpath
-  previous_release = Pathname.new("#{@TO_DIR}/previous").realpath
+  previous_release = File.readlink("#{@TO_DIR}/previous")
   FileUtils::rm_rf("#{@TO_DIR}/latest")
   FileUtils::ln_s(previous_release, "#{@TO_DIR}/latest", :force => true)
 
@@ -94,7 +91,7 @@ Dir.chdir(@tmpdir) {
   FileUtils::rm_rf("#{@TO_DIR}/#{@new}/.git")
   FileUtils::rm_rf("#{@TO_DIR}/#{@new}/README.md")
   if File.exists?("#{@TO_DIR}/latest")
-    previous = Pathname.new("#{@TO_DIR}/latest").realpath
+    previous = File.readlink("#{@TO_DIR}/latest")
     FileUtils::rm_rf("#{@TO_DIR}/previous")
     FileUtils::ln_s(previous, "#{@TO_DIR}/previous", :force => true)
   end
