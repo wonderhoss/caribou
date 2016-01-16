@@ -20,14 +20,14 @@ module AwsParser
       opts.separator "Specific options:"
       
       opts.on("-k", "--awskeyid ID", "The AWS key ID to use") do |id|
-        @options[:awskeyid] = id
+        @options[:awskey_id] = id
       end
       
       opts.on("-r", "--region REGION", "The AWS region to use") do |region|
         @options[:awsregion] = region
       end
       
-      opts.on("-f", "--cfgfile FILE", "Load configuration from FILE") do |configfile|
+      opts.on_tail("-f", "--cfgfile FILE", "Load configuration from FILE") do |configfile|
         fileconfig = KeyValueParser.parseFile(configfile)
         @options = fileconfig.merge!(@options)
       end

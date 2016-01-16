@@ -14,7 +14,10 @@ begin
   end
   
   @options = AwsParser.parse(ARGV)
-  if ARGV.length > 1
+  if ARGV.length == 0
+    STDERR.puts "No command given. Try --help"
+    exit 1
+  elsif ARGV.length > 1
     STDERR.puts "Unknown command '#{ARGV.join(" ")}'"
     exit 1
   end
@@ -26,7 +29,7 @@ begin
   case @command
   when "list"
     puts "Available AWS Regions:"
-    regions = AwsHelper::listAwsRegions(@options[:awskeyid],@options[:awskey])
+    regions = AwsHelper::listAwsRegions(@options[:awskey_id],@options[:awskey])
     regions.each {|region| puts region}
   else
     STDERR.puts "Unknown command '#{@command}'"

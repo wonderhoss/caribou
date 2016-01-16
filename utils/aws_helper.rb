@@ -1,6 +1,6 @@
 require 'aws-sdk'
 
-module AwsHelper
+class AwsHelper
   
   class AwsHelperException < Exception; end
   
