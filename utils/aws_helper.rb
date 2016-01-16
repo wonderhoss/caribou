@@ -40,20 +40,40 @@ class AwsHelper
     end
   end
   
-  def getSecurityGroupId(name, create = false)
-    if name.nil? || name.empty?
-        name = SECURITY_GROUP_DEFAULT
-    end
+  def getSecurityGroupId(name = SECURITY_GROUP_DEFAULT)
     begin
       result = @ec2.describe_security_groups({
         group_names: [name]
       })
-      return @group_id = result.security_groups[0].group_id
+      return result.security_groups[0].group_id
     rescue Aws::Errors::ServiceError => e
-      if ! e.code == "InvalidGroupNotFound"
+      logv "AWS Error during Security Group lookup with code #{e.code}"
+      if e.code != "InvalidGroupNotFound"
         puts "Error: #{e}"
       else
-        puts "Group does not exist. Might create if I feel like it."
+        logv "Caribou Default Security Group does not exist."
+        begin
+          logv "Creating Caribou Default Security Group."
+          result = @ec2.create_security_group({
+            group_name: name,
+            description: "Created from Ruby SDK"
+          })
+          group_id = result.data.group_id
+          @ec2.create_tags({
+            resources: [ group_id ],
+            tags: [
+              {
+                key: "application",
+                value: "caribou"
+              }
+            ]
+          })
+          logv "New group #{name} created with id #{group_id}\nGroup tagged with \"application:caribou\"."
+          return group_id
+        rescue Aws::Errors::ServiceError => e
+          puts "Failed to create security group:"
+          puts e
+        end
       end
     end
   end

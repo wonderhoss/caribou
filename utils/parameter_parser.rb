@@ -6,7 +6,7 @@ require 'aws-sdk'
 module AwsParser
 
   #Set Defaults
-  COMMANDS = ['list']
+  COMMANDS = ['list', 'getsgid']
   @options =  {:awsregion => "us-east-1"}
   
   def self.parse(args)
@@ -27,7 +27,7 @@ module AwsParser
         @options[:awsregion] = region
       end
       
-      opts.on("-s", "--security-group-name", "The AWS EC2 Security Group name to use") do |name|
+      opts.on("-s", "--security-group-name GROUPNAME", "The AWS EC2 Security Group name to use") do |name|
         @options[:securitygroup_name] = name
       end
       
