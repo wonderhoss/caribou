@@ -1,5 +1,6 @@
 require 'optparse'
 require './keyvalparse'
+require './aws_helper'
 require 'aws-sdk'
 
 module Parser
@@ -42,37 +43,22 @@ module Parser
       @options[:awskey] = gets.chomp
     end
     
-    verifyAwsRegion unless @options[:awsregion] == 'us-east-1'
+    unless @options[:awsregion] == 'us-east-1'
+      puts "Validating AWS region"
+      raise OptionParser::ParseError.new("Region #{@options[:awsregion]} is not a valid AWS region.") unless verifyAwsRegion(@options[:awskeyid], @options[:awskey], @options[:awsregion])
+    end
     
     @options
   end
 
-  def self.verifyAwsRegion
-    puts "Checking for valid AWS region"
-    getAwsRegions.each do |region|
-      return if @options[:awsregion] == region[:region_name]
-    end
-    raise OptionParser::ParseError.new("Region #{@options[:awsregion]} is not a valid AWS region.")
-  end
-
-  def self.getAwsRegions
-    begin
-      Aws.use_bundled_cert!
-      credentials = Aws::Credentials.new(@options[:awskeyid], @options[:awskey])
-      ec2 = Aws::EC2::Client.new(credentials: credentials, region: 'us-east-1')
-      return ec2.describe_regions.regions
-    rescue Aws::Errors::ServiceError => e
-      puts "Failed to connect to AWS: #{e}"
-    end
-  end
 
   begin
     opts = Parser.parse(ARGV)
     puts "DEBUG: Config found: #{opts}"
     if @options[:list]
         puts "Available AWS Regions:"
-        regions = Parser.getAwsRegions
-        regions.each {|region| puts region[:region_name]}
+        regions = AwsHelper::listAwsRegions(@options[:awskeyid],@options[:awskey])
+        regions.each {|region| puts region}
     end
     
   rescue OptionParser::ParseError => e
