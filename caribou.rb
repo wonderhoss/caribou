@@ -1,9 +1,8 @@
 require_relative 'utils/parameter_parser.rb'
 require_relative 'utils/aws_helper.rb'
+require_relative 'utils/verbose.rb'
 
-def logv(message)
-    puts message if @options[:verbose]
-end
+include Verbose
 
 begin
   puts
@@ -24,13 +23,12 @@ begin
   end
   @command = ARGV[0]
   
+  @verbose = @options[:verbose]
+  
   logv("Running command #{@command} with config:\n#{@options}")
   puts
 
-  helper = AwsHelper.new({
-    key: @options[:awskey_id],
-    secret: @options[:awskey]
-  })
+  helper = AwsHelper.new(@options)
 
   case @command
   when "list"

@@ -1,21 +1,26 @@
 require 'aws-sdk'
+require_relative 'verbose.rb'
 
 class AwsHelper
+ 
+  include Verbose
   
   class AwsHelperException < Exception; end
   
   SECURITY_GROUP_DEFAULT = "Caribou Default"
   
   def initialize(options = {})
-    if !options.has_key?(:key)
+    @verbose = options[:verbose]
+    
+    if !options.has_key?(:awskey_id)
       raise ArgumentError.new("AWS Key ID required")
-    elsif !options.has_key?(:secret)
+    elsif !options.has_key?(:awskey)
       raise ArgumentError.new("AWS secret key required")
     end
     
-    @region = options.fetch(:region, "us-east-1")
+    @region = options.fetch(:awsregion, "us-east-1")
     Aws.use_bundled_cert!
-    @credentials = Aws::Credentials.new(options[:key], options[:secret])
+    @credentials = Aws::Credentials.new(options[:awskey_id], options[:awskey])
     @ec2 = Aws::EC2::Client.new({credentials: @credentials, region: @region})
   end
   
