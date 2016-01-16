@@ -37,6 +37,13 @@ begin
     puts "Available AWS Regions:"
     regions = helper.listAwsRegions
     regions.each {|region| puts region}
+    exit
+  when "getsgid"
+    puts "Default Security Group:"
+    id = helper.getSecurityGroupId(@options[:securitygroup_name])
+    puts "Name: #{@options[:securitygroup_name]}"
+    puts "ID:   #{id}"
+    exit
   else
     STDERR.puts "Unknown command '#{@command}'"
     exit 1

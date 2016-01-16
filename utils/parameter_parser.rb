@@ -27,6 +27,10 @@ module AwsParser
         @options[:awsregion] = region
       end
       
+      opts.on("-s", "--security-group-name", "The AWS EC2 Security Group name to use") do |name|
+        @options[:securitygroup_name] = name
+      end
+      
       opts.on_tail("-f", "--cfgfile FILE", "Load configuration from FILE") do |configfile|
         fileconfig = KeyValueParser.parseFile(configfile)
         @options = fileconfig.merge!(@options)
