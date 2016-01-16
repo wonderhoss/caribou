@@ -53,7 +53,7 @@ module AwsParser
     end.parse!(args)
     
     #Verify parsed options
-    if !@options.has_key?(:awskeyid)
+    if !@options.has_key?(:awskey_id)
         raise OptionParser::MissingArgument.new("AWS Key ID is required.")
     elsif !@options.has_key?(:awskey)
       print "Please enter AWS secret key: "
@@ -61,8 +61,12 @@ module AwsParser
     end
     
     unless @options[:awsregion] == 'us-east-1'
-      puts "Validating AWS region"
-      raise OptionParser::ParseError.new("Region #{@options[:awsregion]} is not a valid AWS region.") unless verifyAwsRegion(@options[:awskeyid], @options[:awskey], @options[:awsregion])
+      puts "Validating specified AWS region"
+      helper = AwsHelper.new({
+        key: @options[:awskey_id],
+        secret: @options[:awskey]
+      })
+      raise OptionParser::ParseError.new("Region #{@options[:awsregion]} is not a valid AWS region.") unless helper.verifyAwsRegion(@options[:awsregion])
     end
     
     @options

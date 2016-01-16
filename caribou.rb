@@ -1,4 +1,5 @@
 require_relative 'utils/parameter_parser.rb'
+require_relative 'utils/aws_helper.rb'
 
 def logv(message)
     puts message if @options[:verbose]
@@ -26,10 +27,15 @@ begin
   logv("Running command #{@command} with config:\n#{@options}")
   puts
 
+  helper = AwsHelper.new({
+    key: @options[:awskey_id],
+    secret: @options[:awskey]
+  })
+
   case @command
   when "list"
     puts "Available AWS Regions:"
-    regions = AwsHelper::listAwsRegions(@options[:awskey_id],@options[:awskey])
+    regions = helper.listAwsRegions
     regions.each {|region| puts region}
   else
     STDERR.puts "Unknown command '#{@command}'"
