@@ -1,25 +1,23 @@
 require 'optparse'
-require './keyvalparse'
-require './aws_helper'
+require_relative './keyvalparse'
+require_relative './aws_helper'
 require 'aws-sdk'
 
-module Parser
+module AwsParser
 
   #Set Defaults
-  @options =  {:awsregion => "us-east-1", :list => false}
+  COMMANDS = ['list']
+  @options =  {:awsregion => "us-east-1"}
   
   def self.parse(args)
-    
+
     #Setup option parser
     OptionParser.new do |opts|
-      opts.banner = "Usage: #{$0} [options]"
+      opts.banner = "Usage: #{$0} <command> [options]"
+      opts.separator ""
+      opts.separator "Command can be one of: #{COMMANDS.join(" ")}"
       opts.separator ""
       opts.separator "Specific options:"
-      
-      opts.on("--list-aws-regions", "Display a list of available AWS regions") do
-        @options[:list] = true
-      end
-      
       
       opts.on("-k", "--awskeyid ID", "The AWS key ID to use") do |id|
         @options[:awskeyid] = id
@@ -32,6 +30,25 @@ module Parser
       opts.on("-f", "--cfgfile FILE", "Load configuration from FILE") do |configfile|
         fileconfig = KeyValueParser.parseFile(configfile)
         @options = fileconfig.merge!(@options)
+      end
+      
+      opts.on_tail("-v", "--verbose", "Show verbose logging") do |v|
+        @options[:verbose] = v
+      end
+      
+      opts.on_tail("-h", "--help", "Show this message") do
+        puts opts
+        exit
+      end
+
+      # Another typical switch to print the version.
+      opts.on_tail("--version", "Show version information") do
+        File.open(File.expand_path("./VERSION", File.dirname(__FILE__)), "r") do |vfile|
+          puts ("Caribou version: #{vfile.read}")
+          puts
+          exit
+        end
+        exit
       end
     end.parse!(args)
     
@@ -50,21 +67,5 @@ module Parser
     
     @options
   end
-
-
-  begin
-    opts = Parser.parse(ARGV)
-    puts "DEBUG: Config found: #{opts}"
-    if @options[:list]
-        puts "Available AWS Regions:"
-        regions = AwsHelper::listAwsRegions(@options[:awskeyid],@options[:awskey])
-        regions.each {|region| puts region}
-    end
-    
-  rescue OptionParser::ParseError => e
-    puts "#{e}"
-    exit 1
-  rescue KeyValueParser::ParseError => fe
-    puts "#{fe}"
-  end
+  
 end
