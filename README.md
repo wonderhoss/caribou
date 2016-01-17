@@ -17,7 +17,9 @@ CARIBOU
 
 Usage: C:/Users/pita/dev/caribou/caribou.rb <command> [options]
 
-Command can be one of: list getsgid
+Command can be one of:
+list       - List all AWS regions available with the credentials provided
+getsgid    - Get the ID of the default AWS Security Group Caribou will use
 
 Specific options:
     -k, --awskeyid ID                The AWS key ID to use

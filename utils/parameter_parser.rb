@@ -6,7 +6,7 @@ require 'aws-sdk'
 module AwsParser
 
   #Set Defaults
-  COMMANDS = ['list', 'getsgid']
+  COMMANDS = {'list' => "List all AWS regions available with the credentials provided", 'getsgid' => "Get the ID of the default AWS Security Group Caribou will use" }
   @options =  {:awsregion => "us-east-1"}
   
   def self.parse(args)
@@ -15,7 +15,8 @@ module AwsParser
     OptionParser.new do |opts|
       opts.banner = "Usage: #{$0} <command> [options]"
       opts.separator ""
-      opts.separator "Command can be one of: #{COMMANDS.join(" ")}"
+      opts.separator "Command can be one of:"
+      COMMANDS.each {|key, value| opts.separator "#{key.ljust(10)} - #{value}"}
       opts.separator ""
       opts.separator "Specific options:"
       
