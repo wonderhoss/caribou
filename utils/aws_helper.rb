@@ -1,11 +1,13 @@
 require 'aws-sdk'
 require_relative 'verbose.rb'
+require 'netaddr'
+require 'open-uri'
+
+class AwsHelperException < Exception; end
 
 class AwsHelper
  
   include Verbose
-  
-  class AwsHelperException < Exception; end
   
   SECURITY_GROUP_DEFAULT = "Caribou Default"
   
@@ -21,6 +23,7 @@ class AwsHelper
     @region = options.fetch(:awsregion, "us-east-1")
     Aws.use_bundled_cert!
     @credentials = Aws::Credentials.new(options[:awskey_id], options[:awskey])
+    logv "INIT: Credentials valid? #{@credentials.set?}"
     @ec2 = Aws::EC2::Client.new({credentials: @credentials, region: @region})
   end
   
@@ -36,7 +39,8 @@ class AwsHelper
       regions =  @ec2.describe_regions.regions
       return regions.map{ |region| region[:region_name]}
     rescue Aws::Errors::ServiceError => e
-      raise AwsHelperException(e)
+      logv e
+      raise AwsHelperException.new(e)
     end
   end
   
@@ -45,7 +49,37 @@ class AwsHelper
       result = @ec2.describe_security_groups({
         group_names: [name]
       })
-      return result.security_groups[0].group_id
+      group_id = result.security_groups[0].group_id
+      group = Aws::EC2::SecurityGroup.new(group_id, {client: @ec2})
+      logv "Existing group found\n"
+      public_ip = open('http://whatismyip.akamai.com').read
+      public_ip << "/32"
+      logv "Public IP queried from Akamai: #{public_ip}\n\n"
+      logv "Ingress Permissions on existing group:\n"
+      ssh_in_allowed = false
+      group.ip_permissions.each do |permission|
+        permission.ip_ranges.each do |range|
+          cidr = NetAddr::CIDR.create(range.cidr_ip)
+          if permission.ip_protocol == 'tcp' && permission.from_port <= 22 && permission.to_port >= 22 && (range.cidr_ip == public_ip || cidr.contains?(public_ip))
+            logv "#{range.cidr_ip} (#{permission.ip_protocol}) #{permission.from_port} - #{permission.to_port} *"
+            ssh_in_allowed = true
+          else
+            logv "#{range.cidr_ip} (#{permission.ip_protocol}) #{permission.from_port} - #{permission.to_port}"
+          end
+        end
+      end
+      logv
+      logv "Existing group allows SSH in? #{ssh_in_allowed}"
+      if !ssh_in_allowed
+        puts "Existing group does not allow SSH in from this IP. Adding rule."
+        group.authorize_ingress({
+          cidr_ip: public_ip,
+          from_port: 22,
+          to_port: 22,
+          ip_protocol: "tcp"
+        })
+      end      
+      return group_id
     rescue Aws::Errors::ServiceError => e
       logv "AWS Error during Security Group lookup with code #{e.code}"
       if e.code != "InvalidGroupNotFound"
@@ -67,6 +101,13 @@ class AwsHelper
                 value: "caribou"
               }
             ]
+          })
+          group = Aws::EC2::SecurityGroup.new(group_id, {client: @ec2})
+          group.authorize_ingress({
+            cidr_ip: public_ip,
+            from_port: 22,
+            to_port: 22,
+            ip_protocol: "tcp"
           })
           logv "New group #{name} created with id #{group_id}\nGroup tagged with \"application:caribou\"."
           return group_id
