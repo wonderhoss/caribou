@@ -45,6 +45,8 @@ class AwsHelper
   end
   
   def getSecurityGroupId(name = SECURITY_GROUP_DEFAULT)
+    public_ip = open('http://whatismyip.akamai.com').read
+    public_ip << "/32"
     begin
       result = @ec2.describe_security_groups({
         group_names: [name]
@@ -52,8 +54,6 @@ class AwsHelper
       group_id = result.security_groups[0].group_id
       group = Aws::EC2::SecurityGroup.new(group_id, {client: @ec2})
       logv "Existing group found\n"
-      public_ip = open('http://whatismyip.akamai.com').read
-      public_ip << "/32"
       logv "Public IP queried from Akamai: #{public_ip}\n\n"
       logv "Ingress Permissions on existing group:\n"
       ssh_in_allowed = false
@@ -81,9 +81,9 @@ class AwsHelper
       end      
       return group_id
     rescue Aws::Errors::ServiceError => e
-      logv "AWS Error during Security Group lookup with code #{e.code}"
       if e.code != "InvalidGroupNotFound"
-        puts "Error: #{e}"
+        logv "AWS Error during Security Group lookup with code #{e.code}"
+        raise e
       else
         logv "Caribou Default Security Group does not exist."
         begin
@@ -103,6 +103,7 @@ class AwsHelper
             ]
           })
           group = Aws::EC2::SecurityGroup.new(group_id, {client: @ec2})
+          logv "Adding SSH ingress rule for #{public_ip}"
           group.authorize_ingress({
             cidr_ip: public_ip,
             from_port: 22,
