@@ -86,36 +86,7 @@ class AwsHelper
         raise e
       else
         logv "Caribou Default Security Group does not exist."
-        begin
-          logv "Creating Caribou Default Security Group."
-          result = @ec2.create_security_group({
-            group_name: name,
-            description: "Created from Ruby SDK"
-          })
-          group_id = result.data.group_id
-          @ec2.create_tags({
-            resources: [ group_id ],
-            tags: [
-              {
-                key: "application",
-                value: "caribou"
-              }
-            ]
-          })
-          group = Aws::EC2::SecurityGroup.new(group_id, {client: @ec2})
-          logv "Adding SSH ingress rule for #{public_ip}"
-          group.authorize_ingress({
-            cidr_ip: public_ip,
-            from_port: 22,
-            to_port: 22,
-            ip_protocol: "tcp"
-          })
-          logv "New group #{name} created with id #{group_id}\nGroup tagged with \"application:caribou\"."
-          return group_id
-        rescue Aws::Errors::ServiceError => e
-          puts "Failed to create security group:"
-          puts e
-        end
+        return createSecurityGroup(name, public_ip)
       end
     end
   end
@@ -123,5 +94,40 @@ class AwsHelper
   def to_s
     return "AWS Helper with key ID #{@credentials.access_key_id} in region #{@region}"
   end
+
+private
+
+    def createSecurityGroup(name, public_ip)
+      begin
+        logv "Creating Caribou Default Security Group."
+        result = @ec2.create_security_group({
+          group_name: name,
+          description: "Created from Ruby SDK"
+        })
+        group_id = result.data.group_id
+        @ec2.create_tags({
+          resources: [ group_id ],
+          tags: [
+            {
+              key: "application",
+              value: "caribou"
+            }
+          ]
+        })
+        group = Aws::EC2::SecurityGroup.new(group_id, {client: @ec2})
+        logv "Adding SSH ingress rule for #{public_ip}"
+        group.authorize_ingress({
+          cidr_ip: public_ip,
+          from_port: 22,
+          to_port: 22,
+          ip_protocol: "tcp"
+        })
+        logv "New group #{name} created with id #{group_id}\nGroup tagged with \"application:caribou\"."
+        return group_id
+      rescue Aws::Errors::ServiceError => e
+        puts "Failed to create security group:"
+        puts e
+      end
+    end
   
 end
