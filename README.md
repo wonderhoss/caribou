@@ -22,14 +22,13 @@ list       - List all AWS regions available with the credentials provided
 getsgid    - Get the ID of the default AWS Security Group Caribou will use
 
 Specific options:
-    -k, --awskeyid ID                The AWS key ID to use
-    -r, --region REGION              The AWS region to use
-    -s GROUPNAME,                    The AWS EC2 Security Group name to use
-        --security-group-name
-    -f, --cfgfile FILE               Load configuration from FILE
-    -v, --verbose                    Show verbose logging
-    -h, --help                       Show this message
-        --version                    Show version information
+    -k, --awskeyid ID                      The AWS key ID to use
+    -r, --region REGION                    The AWS region to use
+    -s GROUPNAME, --security-group-name    The AWS EC2 Security Group name to use
+    -f, --cfgfile FILE                     Load configuration from FILE
+    -v, --verbose                          Show verbose logging
+    -h, --help                             Show this message
+        --version                          Show version information
 ```
 
 ##Notes
