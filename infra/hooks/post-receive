@@ -50,7 +50,7 @@ if (@new =~ /^0*$/)
 
   releases = Dir.glob("#{@TO_DIR}/*")
   releases.delete(previous_release)
-  new_previous = releases.max_by { |f| f.length==40 ? File.ctime(f) : 0 }
+  new_previous = releases.max_by { |f| f.length==40 ? File.ctime(f) : Time.new(0) }
   FileUtils::rm_rf("#{@TO_DIR}/latest")
   FileUtils::ln_s(new_previous, "#{@TO_DIR}/previous", :force => true)
 
