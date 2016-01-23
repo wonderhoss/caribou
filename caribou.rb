@@ -44,7 +44,7 @@ begin
     exit
   when "deploy_master"
     puts "Deploying Caribou Master Node"
-    ip = helper.deployMaster(@options[:securitygroup_name])
+    ip = helper.deployMaster(@options[:securitygroup_name], @options[:key_name])
     puts "Master Node IP: #{ip}"
   when "shutdown"
     puts "Shutting down Caribou Cluster"

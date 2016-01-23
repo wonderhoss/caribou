@@ -6,7 +6,11 @@ require 'aws-sdk'
 module AwsParser
 
   #Set Defaults
-  COMMANDS = {'list' => "List all AWS regions available with the credentials provided", 'getsgid' => "Get the ID of the default AWS Security Group Caribou will use", "deploy_master" => "Deploy the Caribou Master Node", "shutdown" => "Shutdown the Caribou Cluster"}
+  COMMANDS = {'list' => "List all AWS regions available with the credentials provided",
+              'getsgid' => "Get the ID of the default AWS Security Group Caribou will use",
+              'deploy_master' => "Deploy the Caribou Master Node",
+              'shutdown' => "Shutdown the Caribou Cluster"
+              }
   @options =  {:awsregion => "us-east-1"}
   
   def self.parse(args)
@@ -20,12 +24,16 @@ module AwsParser
       opts.separator ""
       opts.separator "Specific options:"
       
-      opts.on("-k", "--awskeyid ID", "The AWS key ID to use") do |id|
+      opts.on("-a", "--awskeyid ID", "The AWS key ID to use") do |id|
         @options[:awskey_id] = id
       end
       
       opts.on("-r", "--region REGION", "The AWS region to use") do |region|
         @options[:awsregion] = region
+      end
+
+      opts.on("-k", "--keypair-name NAME", "The key pair name to use for master node") do |key|
+        @options[:keyname] = key
       end
       
       opts.on("-s", "--security-group-name GROUPNAME", "The AWS EC2 Security Group name to use") do |name|
@@ -46,7 +54,6 @@ module AwsParser
         exit
       end
 
-      # Another typical switch to print the version.
       opts.on_tail("--version", "Show version information") do
         File.open(File.expand_path("./VERSION", File.dirname(__FILE__)), "r") do |vfile|
           puts ("Caribou version: #{vfile.read}")

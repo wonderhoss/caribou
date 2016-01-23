@@ -92,8 +92,30 @@ class AwsHelper
     end
   end
   
-  def deployMaster(security_group)
+  def deployMaster(security_group, keyname = nil, instance_type = "t1.micro", image_id = "ami-7b386c11")
+    if keyname.nil?
+      puts "Creating new key pair..."
+      key = createKeypair()
+    else
+      begin
+        logv "Looking up key pair by name"
+        key_result = ec2.describe_key_pairs(key_names: [keyname])
+        logv "Key found"
+        key = { name: key_result.key_pairs[0].key_name, fingerprint: key_result.key_pairs[0].key_fingerprint }
+      rescue Aws::EC2::Errors::ServiceError => e
+        if e.code == "InvalidKeyPairNotFound"
+          puts "No key pair '#{keyname}' exists. Creating a new one."
+          key = createKeypair(keyname)
+        end
+      end
+    end
+    if key.nil?
+      puts "ERROR: Error while creating key pair. Aborting."
+      exit 42
+    end
+    
     group_id = getSecurityGroupId(security_group)
+    
     ip_allocation = @ec2.allocate_address()
     logv "Allocated IP address:"
     table = Terminal::Table.new do |t|
@@ -102,6 +124,29 @@ class AwsHelper
       t.add_row [ip_allocation.public_ip, ip_allocation.allocation_id, ip_allocation.domain]
     end
     logv table
+    
+    run_result = @ec2.run_instance({
+      image_id: image_id,
+      min_count: 1,
+      max_count: 1,
+      key_name: key[:name],
+      security_group_ids: [group_id],
+      instance_type: instance_type
+    })
+    logv "Requested instance launch. Request ID is #{run_result.reservation_id}"
+    @ec2.associate_address({
+      instance_id: run_result.instances[0].instance_id,
+      public_ip: ip_allocation.public_ip
+    })
+    logv "IP #{ip_allocation.public_ip} associated with instance"
+    
+    table = Terminal::Table.new do |t|
+      t << ['Instance ID', 'Instance Type', 'Public IP', 'State']
+      t << :separator
+      t.add_row [run_result.instances[0].instance_id, run_result.instances[0].instance_type, run_result.instances[0].public_ip, run_result.instances[0].state]
+    end
+    logv table
+    
     return ip_allocation.public_ip
   end
   
@@ -172,6 +217,32 @@ private
            }
         ]
       })
+    end
+    
+    def createKeypair(name = "caribou_keypair_#{(Time.now.to_i).to_s(16)}")
+      if File.exists?("#{name}.pem")
+        i = 1
+        while File.exists?("#{name}_#{i}.pem")
+          i += 1
+        end
+        name = "#{name}_#{i}.pem"
+      end
+      begin
+        key_response =  @ec2.create_key_pair({
+          key_name: name
+        })
+      rescue Aws::EC2::Errors::ServiceError => e
+        puts "ERROR: Failed to create keypair with name #{name}:"
+        puts e.message
+        return
+      end
+      File.open("#{name}.pem", "w") { |keyfile|
+        key_response.key_material.lines { |line|
+          keyfile.puts(line)
+        }
+      }
+      puts "New key #{name} written to #{name}.pem"
+      return {name: name, fingerprint: key_response.key_fingerprint }
     end
   
 end
