@@ -42,6 +42,14 @@ begin
     puts "Name: #{@options[:securitygroup_name]}"
     puts "ID:   #{id}"
     exit
+  when "deploy_master"
+    puts "Deploying Caribou Master Node"
+    ip = helper.deployMaster(@options[:securitygroup_name])
+    puts "Master Node IP: #{ip}"
+  when "shutdown"
+    puts "Shutting down Caribou Cluster"
+    puts
+    helper.shutdown()
   else
     STDERR.puts "Unknown command '#{@command}'"
     exit 1

@@ -2,6 +2,7 @@ require 'aws-sdk'
 require_relative 'verbose.rb'
 require 'netaddr'
 require 'open-uri'
+require 'terminal-table'
 
 class AwsHelperException < Exception; end
 
@@ -91,6 +92,45 @@ class AwsHelper
     end
   end
   
+  def deployMaster(security_group)
+    group_id = getSecurityGroupId(security_group)
+    ip_allocation = @ec2.allocate_address()
+    logv "Allocated IP address:"
+    table = Terminal::Table.new do |t|
+      t << ['IP', 'Allocation ID', 'Domain']
+      t << :separator
+      t.add_row [ip_allocation.public_ip, ip_allocation.allocation_id, ip_allocation.domain]
+    end
+    logv table
+    return ip_allocation.public_ip
+  end
+  
+  def shutdown()
+    #temporary code to just release allocated IP
+    ips = @ec2.describe_addresses()
+    puts "Elastic IPs currently allocated:"
+    puts
+    
+    table = Terminal::Table.new do |t|
+      t << ['IP', 'Allocation ID', 'Instance ID', 'Domain']
+      t << :separator
+      ips.addresses.each { |ip|
+        t.add_row [ip.public_ip, ip.allocation_id, ip.instance_id.nil? ? '-unassigned-' : ip.instance_id, ip.domain]
+      }
+    end
+    logv table
+
+    ips.addresses.each do |ip|
+      if ip.domain == "vpc"
+        @ec2.release_address({ allocation_id: ip.allocation_id })
+      else
+        @ec2.release_address({ public_ip: ip.public_ip })
+      end
+    end
+    puts
+    puts "All IPs released"
+  end
+  
   def to_s
     return "AWS Helper with key ID #{@credentials.access_key_id} in region #{@region}"
   end
@@ -105,15 +145,7 @@ private
           description: "Created from Ruby SDK"
         })
         group_id = result.data.group_id
-        @ec2.create_tags({
-          resources: [ group_id ],
-          tags: [
-            {
-              key: "application",
-              value: "caribou"
-            }
-          ]
-        })
+        tagCaribou(group_id)
         group = Aws::EC2::SecurityGroup.new(group_id, {client: @ec2})
         logv "Adding SSH ingress rule for #{public_ip}"
         group.authorize_ingress({
@@ -128,6 +160,18 @@ private
         puts "Failed to create security group:"
         puts e
       end
+    end
+    
+    def tagCaribou(resource)
+      @ec2.create_tags({
+        resources: [ resource ],
+        tags: [
+           {
+             key: "application",
+             value: "caribou"
+           }
+        ]
+      })
     end
   
 end

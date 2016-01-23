@@ -6,7 +6,7 @@ require 'aws-sdk'
 module AwsParser
 
   #Set Defaults
-  COMMANDS = {'list' => "List all AWS regions available with the credentials provided", 'getsgid' => "Get the ID of the default AWS Security Group Caribou will use" }
+  COMMANDS = {'list' => "List all AWS regions available with the credentials provided", 'getsgid' => "Get the ID of the default AWS Security Group Caribou will use", "deploy_master" => "Deploy the Caribou Master Node", "shutdown" => "Shutdown the Caribou Cluster"}
   @options =  {:awsregion => "us-east-1"}
   
   def self.parse(args)

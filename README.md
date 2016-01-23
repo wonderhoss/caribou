@@ -3,6 +3,7 @@
 ##Requirements
 * AWS SDK for Ruby v2
 * NetAddr
+* terminal-table (https://github.com/tj/terminal-table)
 
 * Uses Akamai's public IP service (http://whatismyip.akamai.com)
 
