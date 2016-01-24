@@ -36,6 +36,14 @@ module AwsParser
         @options[:keyname] = key
       end
       
+      opts.on("-i", "-master-instance-type TYPE") do |type|
+        @options[:master_instance_type] = type
+      end
+
+      opts.on("-t", "--master-image-id ID") do |id|
+        @options[:master_image_id] = id
+      end
+      
       opts.on("-s", "--security-group-name GROUPNAME", "The AWS EC2 Security Group name to use") do |name|
         @options[:securitygroup_name] = name
       end
