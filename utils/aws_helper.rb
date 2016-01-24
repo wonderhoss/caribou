@@ -99,7 +99,7 @@ class AwsHelper
     else
       begin
         logv "Looking up key pair by name"
-        key_result = ec2.describe_key_pairs(key_names: [keyname])
+        key_result = @ec2.describe_key_pairs(key_names: [keyname])
         logv "Key found"
         key = { name: key_result.key_pairs[0].key_name, fingerprint: key_result.key_pairs[0].key_fingerprint }
       rescue Aws::EC2::Errors::ServiceError => e
@@ -116,16 +116,16 @@ class AwsHelper
     
     group_id = getSecurityGroupId(security_group)
     
-    ip_allocation = @ec2.allocate_address()
-    logv "Allocated IP address:"
-    table = Terminal::Table.new do |t|
-      t << ['IP', 'Allocation ID', 'Domain']
-      t << :separator
-      t.add_row [ip_allocation.public_ip, ip_allocation.allocation_id, ip_allocation.domain]
-    end
-    logv table
+    #ip_allocation = @ec2.allocate_address()
+    #logv "Allocated IP address:"
+    #table = Terminal::Table.new do |t|
+    #  t << ['IP', 'Allocation ID', 'Domain']
+    #  t << :separator
+    #  t.add_row [ip_allocation.public_ip, ip_allocation.allocation_id, ip_allocation.domain]
+    #end
+    #logv table
     
-    run_result = @ec2.run_instance({
+    run_result = @ec2.run_instances({
       image_id: image_id,
       min_count: 1,
       max_count: 1,
@@ -134,20 +134,30 @@ class AwsHelper
       instance_type: instance_type
     })
     logv "Requested instance launch. Request ID is #{run_result.reservation_id}"
-    @ec2.associate_address({
-      instance_id: run_result.instances[0].instance_id,
-      public_ip: ip_allocation.public_ip
-    })
-    logv "IP #{ip_allocation.public_ip} associated with instance"
+
+    #@ec2.associate_address({
+    #  instance_id: run_result.instances[0].instance_id,
+    #  public_ip: ip_allocation.public_ip
+    #})
+    #logv "IP #{ip_allocation.public_ip} associated with instance"
+
+    instance_public_ip = run_result.instances[0].public_ip_address
+    while instance_public_ip.nil?
+      logv "No public IP yet. Polling AWS..."
+      sleep(10)
+      dsc = @ec2.describe_instances(instance_ids: [run_result.instances[0].instance_id])
+      instance_public_ip = dsc.reservations[0].instances[0].public_ip_address
+    end
+    logv "Public IP address found: #{instance_public_ip}"
     
     table = Terminal::Table.new do |t|
       t << ['Instance ID', 'Instance Type', 'Public IP', 'State']
       t << :separator
-      t.add_row [run_result.instances[0].instance_id, run_result.instances[0].instance_type, run_result.instances[0].public_ip, run_result.instances[0].state]
+      t.add_row [run_result.instances[0].instance_id, run_result.instances[0].instance_type, instance_public_ip, run_result.instances[0].state.name]
     end
     logv table
     
-    return ip_allocation.public_ip
+    return instance_public_ip
   end
   
   def shutdown()

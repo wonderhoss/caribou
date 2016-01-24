@@ -33,7 +33,7 @@ module AwsParser
       end
 
       opts.on("-k", "--keypair-name NAME", "The key pair name to use for master node") do |key|
-        @options[:keyname] = key
+        @options[:key_name] = key
       end
       
       opts.on("-i", "-master-instance-type TYPE") do |type|
