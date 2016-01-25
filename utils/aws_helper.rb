@@ -158,6 +158,9 @@ class AwsHelper
       dsc = @ec2.describe_instances(instance_ids: [run_result.instances[0].instance_id])
       instance_public_ip = dsc.reservations[0].instances[0].public_ip_address
     end
+    
+    tagCaribou(run_result.instances[0].instance_id)
+    
     logv "Public IP address found: #{instance_public_ip}"
     
     table = Terminal::Table.new do |t|
