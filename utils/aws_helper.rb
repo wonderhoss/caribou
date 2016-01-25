@@ -92,25 +92,35 @@ class AwsHelper
     end
   end
   
-  def deployMaster(security_group, keyname = nil, instance_type = "t1.micro", image_id = "ami-7b386c11")
+  def deployMaster(security_group, keyname = nil, instance_type = "t1.micro", image_id = "ami-7b386c11", pubkey = nil)
     if keyname.nil?
-      puts "Creating new key pair..."
-      key = createKeypair()
+      if pubkey.nil?
+        puts "Creating new key pair..."
+        key = createKeypair()
+      else
+        name = "caribou_keypair_#{(Time.now.to_i).to_s(16)}"
+        key = importKey(name, pubkey)
+      end
     else
       begin
         logv "Looking up key pair by name"
         key_result = @ec2.describe_key_pairs(key_names: [keyname])
         logv "Key found"
         key = { name: key_result.key_pairs[0].key_name, fingerprint: key_result.key_pairs[0].key_fingerprint }
+        puts "WARN: A key with the provided name already exists in AWS. Using existing key instead of public key provided." unless pubkey.nil?
       rescue Aws::EC2::Errors::ServiceError => e
         if e.code == "InvalidKeyPairNotFound"
-          puts "No key pair '#{keyname}' exists. Creating a new one."
-          key = createKeypair(keyname)
+          puts "No key pair '#{keyname}' exists."
+          if pubkey.nil?
+            key = createKeypair(keyname)
+          else
+            key = importKey(keyname, pubkey)
+          end
         end
       end
     end
     if key.nil?
-      puts "ERROR: Error while creating key pair. Aborting."
+      puts "ERROR: Error while configuring key pair. Aborting."
       exit 42
     end
     
@@ -242,6 +252,7 @@ private
           key_name: name
         })
       rescue Aws::EC2::Errors::ServiceError => e
+        logv e
         puts "ERROR: Failed to create keypair with name #{name}:"
         puts e.message
         return
@@ -255,4 +266,16 @@ private
       return {name: name, fingerprint: key_response.key_fingerprint }
     end
   
+    def importKey(name, pubkey)
+      puts "Importing your key as #{name}"
+      begin
+        import = @ec2.import_key_pair({key_name: name, public_key_material: pubkey})
+        return {name: import.key_name, fingerprint: import.key_fingerprint}
+      rescue Aws::EC2::Errors::ServiceError => e
+        logv e
+        puts "ERROR: Failed to import key:"
+        puts e.message
+        return
+      end
+    end
 end
