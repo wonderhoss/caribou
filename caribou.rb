@@ -34,6 +34,7 @@ begin
   when "list"
     puts "Available AWS Regions:"
     regions = helper.listAwsRegions
+    puts "Failed to get regions from AWS" if regions.nil?
     regions.each {|region| puts region}
     exit
   when "getsgid"

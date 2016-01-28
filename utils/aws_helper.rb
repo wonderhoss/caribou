@@ -4,14 +4,21 @@ require 'netaddr'
 require 'open-uri'
 require 'terminal-table'
 
-class AwsHelperException < Exception; end
-
+#######################################################
+#
+# Main interaction point with the AWS SDK
+#
+#######################################################
 class AwsHelper
- 
+
+  # Mix in verbose debug logging 
   include Verbose
   
   SECURITY_GROUP_DEFAULT = "Caribou Default"
   
+  #
+  # Sets up the EC2 client
+  #
   def initialize(options = {})
     @verbose = options[:verbose]
     
@@ -28,23 +35,37 @@ class AwsHelper
     @ec2 = Aws::EC2::Client.new({credentials: @credentials, region: @region})
   end
   
-  def verifyAwsRegion(a_region)
-    listAwsRegions.each do |region|
-      return true if a_region == region
-    end
-    return false
-  end
-
+  #
+  # Gets a list of all availability zones accessible with the AWS credentials used
+  #
   def listAwsRegions
     begin
       regions =  @ec2.describe_regions.regions
       return regions.map{ |region| region[:region_name]}
     rescue Aws::Errors::ServiceError => e
+      logv "AWS call failed:"
       logv e
-      raise AwsHelperException.new(e)
+      return nil
     end
   end
   
+  
+  #
+  # Checks whether a given availability zone is valid for the AWS credentials used
+  #
+  def verifyAwsRegion(a_region)
+    regions = listAwsRegions
+    return false if regions.nil?
+    regions.each do |region|
+      return true if a_region == region
+    end
+    return false
+  end
+
+  
+  #
+  # Queries AWS for the id of a given Security Group
+  #
   def getSecurityGroupId(name = SECURITY_GROUP_DEFAULT)
     public_ip = open('http://whatismyip.akamai.com').read
     public_ip << "/32"
@@ -92,6 +113,10 @@ class AwsHelper
     end
   end
   
+  
+  #
+  # Queries AWS for the status of the Caribou master node
+  #
   def masterStatus
     nodes = findMasterNode()
     if nodes.nil?
@@ -110,6 +135,10 @@ class AwsHelper
     return table
   end
   
+  
+  #
+  # Deploys a new EC2 instance to use as master node
+  #
   def deployMaster(security_group, keyname = nil, instance_type = "t1.micro", image_id = "ami-7b386c11", pubkey = nil)
     if keyname.nil?
       if pubkey.nil?
@@ -192,6 +221,10 @@ class AwsHelper
     return instance_public_ip
   end
   
+  
+  #
+  # Shuts down the Caribou Master Node
+  #
   def shutdown()
     #temporary code to just release allocated IP
     ips = @ec2.describe_addresses()
@@ -218,12 +251,20 @@ class AwsHelper
     puts "All IPs released"
   end
   
+  
+  #
+  # Custom to_s method to include key id and region
+  #
   def to_s
     return "AWS Helper with key ID #{@credentials.access_key_id} in region #{@region}"
   end
 
+
 private
 
+    #
+    # Identifies all non-terminated EC2 instances that are tagged as master node in this availability zone
+    #
     def findMasterNode
       dsc =  @ec2.describe_instances(filters: [
         {name: "tag:application", values: ["caribou"]},
@@ -234,6 +275,10 @@ private
       return dsc.reservations[0].instances
     end
 
+
+    #
+    # Creates a new Security Group which allows SSH ingress that can be used for the master node
+    #
     def createSecurityGroup(name, public_ip)
       begin
         logv "Creating Caribou Default Security Group."
@@ -258,11 +303,19 @@ private
         puts e
       end
     end
+
     
+    #
+    # Tags a given resource with the caribou application tag
+    #
     def tagCaribou(resource)
       tag(resource, "application", "caribou")
     end
-    
+
+
+    #
+    # Tags a given resource
+    #
     def tag(resource, key, value)
       @ec2.create_tags({
         resources: [ resource ],
@@ -274,7 +327,11 @@ private
         ]
       })
     end
-    
+
+
+    #
+    # Creates a new keypair and writes the private key to a file
+    #
     def createKeypair(name = "caribou_keypair_#{(Time.now.to_i).to_s(16)}")
       if File.exists?("#{name}.pem")
         i = 1
@@ -301,7 +358,11 @@ private
       puts "New key #{name} written to #{name}.pem"
       return {name: name, fingerprint: key_response.key_fingerprint }
     end
-  
+
+
+    #
+    # Imports a given keyfile into EC2 and returns the name and fingerprint generated
+    #
     def importKey(name, pubkey)
       puts "Importing your key as #{name}"
       begin
