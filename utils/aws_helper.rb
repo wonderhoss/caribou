@@ -93,11 +93,7 @@ class AwsHelper
   end
   
   def masterStatus
-    dsc = @ec2.describe_instances(filters: [
-      {name: "tag:application", values: ["caribou"]},
-      {name: "tag:node_type", values: ["master"]},
-      {name: "instance-state-name", values: ["pending", "running", "shutting-down", "stopping", "stopped"]}
-    ])
+    dsc = findMasterNode()
     if dsc.reservations.length == 0
       table = Terminal::Table.new do |t|
         t << ['Instance ID', 'Instance Type', 'Public IP', 'State']
@@ -227,6 +223,14 @@ class AwsHelper
   end
 
 private
+
+    def findMasterNode
+      return @ec2.describe_instances(filters: [
+        {name: "tag:application", values: ["caribou"]},
+        {name: "tag:node_type", values: ["master"]},
+        {name: "instance-state-name", values: ["pending", "running", "shutting-down", "stopping", "stopped"]}
+      ])
+    end
 
     def createSecurityGroup(name, public_ip)
       begin
