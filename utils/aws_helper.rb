@@ -16,6 +16,7 @@ class AwsHelper
   
   SECURITY_GROUP_DEFAULT = "Caribou Default"
   
+
   #
   # Sets up the EC2 client
   #
@@ -27,6 +28,8 @@ class AwsHelper
     elsif !options.has_key?(:awskey)
       raise ArgumentError.new("AWS secret key required")
     end
+    
+    @newkey = options[:new_key]
     
     @region = options.fetch(:awsregion, "us-east-1")
     Aws.use_bundled_cert!
@@ -142,8 +145,14 @@ class AwsHelper
   def deployMaster(security_group, keyname = nil, instance_type = "t1.micro", image_id = "ami-7b386c11", pubkey = nil)
     if keyname.nil?
       if pubkey.nil?
-        puts "Creating new key pair..."
-        key = createKeypair()
+        if @newkey
+          puts "Creating new key pair..."
+          key = createKeypair()
+        else
+          puts "ERROR: No keypair provided and --new-key not supplied."
+          puts "ERROR: Unable to deploy."
+          exit 5
+        end
       else
         name = "caribou_keypair_#{(Time.now.to_i).to_s(16)}"
         key = importKey(name, pubkey)
@@ -159,7 +168,14 @@ class AwsHelper
         if e.code == "InvalidKeyPairNotFound"
           puts "No key pair '#{keyname}' exists."
           if pubkey.nil?
-            key = createKeypair(keyname)
+            if @newkey
+              puts "Creating new key pair..."
+              key = createKeypair(keyname)
+            else
+              puts "ERROR: No keypair provided and --new-key not supplied."
+              puts "ERROR: Unable to deploy."
+              exit 5
+            end
           else
             key = importKey(keyname, pubkey)
           end

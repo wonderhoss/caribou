@@ -49,6 +49,10 @@ module AwsParser
         @options[:securitygroup_name] = name
       end
       
+      opts.on("--new-key", "When deploying a new EC2 instance, also create a new keypair if none is provided") do |newkey|
+        @options[:new_key] = newkey
+      end
+      
       opts.on_tail("-f", "--cfgfile FILE", "Load configuration from FILE") do |configfile|
         fileconfig = KeyValueParser.parseFile(configfile)
         @options = fileconfig.merge!(@options)
