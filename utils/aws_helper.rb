@@ -93,8 +93,8 @@ class AwsHelper
   end
   
   def masterStatus
-    dsc = findMasterNode()
-    if dsc.reservations.length == 0
+    nodes = findMasterNode()
+    if nodes.nil?
       table = Terminal::Table.new do |t|
         t << ['Instance ID', 'Instance Type', 'Public IP', 'State']
         t << :separator
@@ -104,7 +104,7 @@ class AwsHelper
       table = Terminal::Table.new do |t|
         t << ['Instance ID', 'Type', 'Public IP', 'Key Name', 'State']
         t << :separator
-        t.add_row [dsc.reservations[0].instances[0].instance_id, dsc.reservations[0].instances[0].instance_type, dsc.reservations[0].instances[0].public_ip_address, dsc.reservations[0].instances[0].key_name, dsc.reservations[0].instances[0].state.name]
+        t.add_row [nodes[0].instance_id, nodes[0].instance_type, nodes[0].public_ip_address, nodes[0].key_name, nodes[0].state.name]
       end
     end
     return table
@@ -225,11 +225,13 @@ class AwsHelper
 private
 
     def findMasterNode
-      return @ec2.describe_instances(filters: [
+      dsc =  @ec2.describe_instances(filters: [
         {name: "tag:application", values: ["caribou"]},
         {name: "tag:node_type", values: ["master"]},
         {name: "instance-state-name", values: ["pending", "running", "shutting-down", "stopping", "stopped"]}
       ])
+      return nil if dsc.reservations.length == 0
+      return dsc.reservations[0].instances
     end
 
     def createSecurityGroup(name, public_ip)
