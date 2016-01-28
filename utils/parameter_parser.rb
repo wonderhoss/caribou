@@ -9,6 +9,7 @@ module AwsParser
   COMMANDS = {'list' => "List all AWS regions available with the credentials provided",
               'getsgid' => "Get the ID of the default AWS Security Group Caribou will use",
               'deploy_master' => "Deploy the Caribou Master Node",
+              'master_status' => "Get the status of the currently deployed Caribou Master Node",
               'shutdown' => "Shutdown the Caribou Cluster"
               }
   @options =  {:awsregion => "us-east-1"}

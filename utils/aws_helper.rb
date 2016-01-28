@@ -92,6 +92,28 @@ class AwsHelper
     end
   end
   
+  def masterStatus
+    dsc = @ec2.describe_instances(filters: [
+      {name: "tag:application", values: ["caribou"]},
+      {name: "tag:node_type", values: ["master"]},
+      {name: "instance-state-name", values: ["pending", "running", "shutting-down", "stopping", "stopped"]}
+    ])
+    if dsc.reservations.length == 0
+      table = Terminal::Table.new do |t|
+        t << ['Instance ID', 'Instance Type', 'Public IP', 'State']
+        t << :separator
+        t.add_row [{:value => "master node not running", :alignment => :center, :colspan => 4}]
+      end
+    else
+      table = Terminal::Table.new do |t|
+        t << ['Instance ID', 'Type', 'Public IP', 'Key Name', 'State']
+        t << :separator
+        t.add_row [dsc.reservations[0].instances[0].instance_id, dsc.reservations[0].instances[0].instance_type, dsc.reservations[0].instances[0].public_ip_address, dsc.reservations[0].instances[0].key_name, dsc.reservations[0].instances[0].state.name]
+      end
+    end
+    return table
+  end
+  
   def deployMaster(security_group, keyname = nil, instance_type = "t1.micro", image_id = "ami-7b386c11", pubkey = nil)
     if keyname.nil?
       if pubkey.nil?
@@ -160,11 +182,12 @@ class AwsHelper
     end
     
     tagCaribou(run_result.instances[0].instance_id)
+    tag(run_result.instances[0].instance_id, "node_type", "master")
     
     logv "Public IP address found: #{instance_public_ip}"
     
     table = Terminal::Table.new do |t|
-      t << ['Instance ID', 'Instance Type', 'Public IP', 'State']
+      t << ['Instance ID', 'Type', 'Public IP', 'State']
       t << :separator
       t.add_row [run_result.instances[0].instance_id, run_result.instances[0].instance_type, instance_public_ip, run_result.instances[0].state.name]
     end
@@ -231,12 +254,16 @@ private
     end
     
     def tagCaribou(resource)
+      tag(resource, "application", "caribou")
+    end
+    
+    def tag(resource, key, value)
       @ec2.create_tags({
         resources: [ resource ],
         tags: [
            {
-             key: "application",
-             value: "caribou"
+             key: key,
+             value: value
            }
         ]
       })
