@@ -45,7 +45,7 @@ begin
     exit
   when "deploy_master"
     puts "Deploying Caribou Master Node"
-    ip = helper.deployMaster(@options[:securitygroup_name], @options[:key_name], @options[:master_instance_type], @options[:master_image_id])
+    ip = helper.deployMaster(@options[:securitygroup_name], @options[:key_name], @options[:master_instance_type], @options[:master_image_id], @options[:keymaterial])
     puts "Master Node successfully deployed with IP: #{ip}"
   when "master_status"
     puts helper.masterStatus()

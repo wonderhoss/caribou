@@ -184,7 +184,7 @@ class AwsHelper
     end
     if key.nil?
       puts "ERROR: Error while configuring key pair. Aborting."
-      exit 42
+      exit 5
     end
     
     group_id = getSecurityGroupId(security_group)
@@ -242,29 +242,45 @@ class AwsHelper
   # Shuts down the Caribou Master Node
   #
   def shutdown()
-    #temporary code to just release allocated IP
-    ips = @ec2.describe_addresses()
-    puts "Elastic IPs currently allocated:"
-    puts
     
-    table = Terminal::Table.new do |t|
-      t << ['IP', 'Allocation ID', 'Instance ID', 'Domain']
-      t << :separator
-      ips.addresses.each { |ip|
-        t.add_row [ip.public_ip, ip.allocation_id, ip.instance_id.nil? ? '-unassigned-' : ip.instance_id, ip.domain]
-      }
+    nodes = findMasterNode
+    if nodes.nil?
+        puts "Master node not running."
+        exit
     end
-    logv table
-
-    ips.addresses.each do |ip|
-      if ip.domain == "vpc"
-        @ec2.release_address({ allocation_id: ip.allocation_id })
-      else
-        @ec2.release_address({ public_ip: ip.public_ip })
-      end
+    begin
+      response = @ec2.terminate_instances({instance_ids: [nodes[0].instance_id]})
+    rescue Aws::EC2::Errors::ServiceException => e
+      logv "ERROR: Failed to shut down instance #{nodes[0].instance_id}:"
+      logv e.message
+      exit 5
     end
-    puts
-    puts "All IPs released"
+    puts "instance #{nodes[0].instance_id} shutting down."
+    logv "State transition: #{response.terminating_instances[0].previous_state.name} => #{response.terminating_instances[0].current_state.name}"
+    
+    #temporary code to just release allocated IP
+    #ips = @ec2.describe_addresses()
+    #puts "Elastic IPs currently allocated:"
+    #puts
+    #
+    #table = Terminal::Table.new do |t|
+    #  t << ['IP', 'Allocation ID', 'Instance ID', 'Domain']
+    #  t << :separator
+    #  ips.addresses.each { |ip|
+    #    t.add_row [ip.public_ip, ip.allocation_id, ip.instance_id.nil? ? '-unassigned-' : ip.instance_id, ip.domain]
+    #  }
+    #end
+    #logv table
+    #
+    #ips.addresses.each do |ip|
+    #  if ip.domain == "vpc"
+    #    @ec2.release_address({ allocation_id: ip.allocation_id })
+    #  else
+    #    @ec2.release_address({ public_ip: ip.public_ip })
+    #  end
+    #end
+    #puts
+    #puts "All IPs released"
   end
   
   

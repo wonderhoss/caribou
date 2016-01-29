@@ -53,6 +53,15 @@ module AwsParser
         @options[:new_key] = newkey
       end
       
+      opts.on("--key-file FILE", "SSH public key to import") do |file|
+        begin
+          @options[:keymaterial] = File.read(file)
+        rescue Exception => e
+          puts "Failed to open file #{file}: #{e.message}"
+          exit 1
+        end
+      end
+      
       opts.on_tail("-f", "--cfgfile FILE", "Load configuration from FILE") do |configfile|
         fileconfig = KeyValueParser.parseFile(configfile)
         @options = fileconfig.merge!(@options)
