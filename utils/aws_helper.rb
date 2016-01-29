@@ -39,7 +39,7 @@ class AwsHelper
   end
   
   #
-  # Gets a list of all availability zones accessible with the AWS credentials used
+  # Gets a list of all region accessible with the AWS credentials used
   #
   def listAwsRegions
     begin
@@ -54,7 +54,7 @@ class AwsHelper
   
   
   #
-  # Checks whether a given availability zone is valid for the AWS credentials used
+  # Checks whether a given region is valid for the AWS credentials used
   #
   def verifyAwsRegion(a_region)
     regions = listAwsRegions
@@ -295,7 +295,7 @@ class AwsHelper
 private
 
     #
-    # Identifies all non-terminated EC2 instances that are tagged as master node in this availability zone
+    # Identifies all non-terminated EC2 instances that are tagged as master node in this region
     #
     def findMasterNode
       dsc =  @ec2.describe_instances(filters: [
