@@ -13,6 +13,7 @@ module KeyValueParser
         lines = open_file.readlines
         lines.each_with_index do |line, num|
           next if line.match(/^\s*$/)
+          next if line.match(/^#.*$/)
           raise ParseError.new("Error parsing config file: Not a key/value pair at line #{num+1}") unless line.include?("=")
           
           line_tokens = line.split("=",2)

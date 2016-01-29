@@ -34,6 +34,7 @@ begin
   when "list"
     puts "Available AWS Regions:"
     regions = helper.listAwsRegions
+    puts "Failed to get regions from AWS" if regions.nil?
     regions.each {|region| puts region}
     exit
   when "getsgid"
@@ -42,6 +43,16 @@ begin
     puts "Name: #{@options[:securitygroup_name]}"
     puts "ID:   #{id}"
     exit
+  when "deploy_master"
+    puts "Deploying Caribou Master Node"
+    ip = helper.deployMaster(@options[:securitygroup_name], @options[:key_name], @options[:master_instance_type], @options[:master_image_id], @options[:keymaterial])
+    puts "Master Node successfully deployed with IP: #{ip}"
+  when "master_status"
+    puts helper.masterStatus()
+  when "shutdown"
+    puts "Shutting down Caribou Cluster"
+    puts
+    helper.shutdown()
   else
     STDERR.puts "Unknown command '#{@command}'"
     exit 1

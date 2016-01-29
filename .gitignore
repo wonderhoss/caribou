@@ -1,2 +1,4 @@
 caribou.cfg
 tests/config/aws.cfg
+test.ppk
+caribou_keypair_*
