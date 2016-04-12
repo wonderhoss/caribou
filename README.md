@@ -1,4 +1,4 @@
-# Caribou - An Exercise in Infrastructure-as-Code
+# Caribou - Infrastructure-as-Code 
 
 ##Requirements
 * AWS SDK for Ruby v2
