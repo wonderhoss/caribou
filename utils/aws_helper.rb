@@ -3,6 +3,7 @@ require_relative 'verbose.rb'
 require 'netaddr'
 require 'open-uri'
 require 'terminal-table'
+require 'base64'
 
 #######################################################
 #
@@ -204,7 +205,8 @@ class AwsHelper
       max_count: 1,
       key_name: key[:name],
       security_group_ids: [group_id],
-      instance_type: instance_type
+      instance_type: instance_type,
+      user_data: Base64.encode64("#!/bin/bash\ntouch /phil_was_here;")
     })
     logv "Requested instance launch. Request ID is #{run_result.reservation_id}"
 
