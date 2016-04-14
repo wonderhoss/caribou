@@ -167,7 +167,11 @@ class AwsHelper
     logv " -> Internet Gateway attached to VPC"
     
     #TODO: Check for existing routing table first
-    
+    run_result = @ec2.create_route_table({vpc_id: vpc_id})
+    rt_id = run_resule.route_table.route_table_id
+    logv " -> Routing Table created"
+    run_result = @ec2.create_route({route_table_id: rt_id, gateway_id: ig_id, destination_cidr_block: "0.0.0.0/0"})
+    logv " -> Internet Gateway Route added"
   end
   
   
