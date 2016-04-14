@@ -140,6 +140,38 @@ class AwsHelper
   end
   
   
+  
+  #
+  # Create VPC, Internet Gateway and Routing Table
+  #
+  def createVPC(block)
+    #TODO: Check for existing VPC first
+    puts "Creating and configuring Caribou VPC"
+    run_result = @ec2.create_vpc({cidr_block: block})
+    logv " -> VPC created"
+    vpc_id = run_result.vpc.vpc_id
+    tagCaribou(vpc_id)
+    table = Terminal::Table.new do |t|
+      t << ['VPC ID', 'State', 'CIDR Block', 'Instance Tenancy']
+      t << :separator
+      t.add_row [run_result.vpc.vpc_id, run_result.vpc.state, run_result.vpc.cidr_block, run_result.vpc.instance_tenancy]
+    end
+    logv table
+    
+    #TODO: Check for existing gateway first
+    run_result = @ec2.create_internet_gateway()
+    ig_id = run_result.internet_gateway.internet_gateway_id
+    tagCaribou(ig_id)
+    logv " -> Internet Gateway created"
+    run_result = @ec2.attach_internet_gateway({internet_gateway_id: ig_id, vpc_id: vpc_id})
+    logv " -> Internet Gateway attached to VPC"
+    
+    #TODO: Check for existing routing table first
+    
+  end
+  
+  
+  
   #
   # Deploys a new EC2 instance to use as master node
   #
