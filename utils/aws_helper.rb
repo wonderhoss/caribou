@@ -151,6 +151,9 @@ class AwsHelper
     logv " -> VPC created"
     vpc_id = run_result.vpc.vpc_id
     tagCaribou(vpc_id)
+    run_result = @ec2.create_subnet({vpc_id: vpc_id, cidr_block: block})
+    subnet_id = run_result.subnet.subnet_id
+    tagCaribou(subnet_id)
     table = Terminal::Table.new do |t|
       t << ['VPC ID', 'State', 'CIDR Block', 'Instance Tenancy']
       t << :separator
@@ -169,11 +172,22 @@ class AwsHelper
     #TODO: Check for existing routing table first
     run_result = @ec2.create_route_table({vpc_id: vpc_id})
     rt_id = run_resule.route_table.route_table_id
+    tagCaribou(tr_id)
     logv " -> Routing Table created"
     run_result = @ec2.create_route({route_table_id: rt_id, gateway_id: ig_id, destination_cidr_block: "0.0.0.0/0"})
     logv " -> Internet Gateway Route added"
+    
+    run_result = @ec2.describe_route-tables({route_table_ids: [ir_id]})
+    table = Terminal::Table.new do |t|
+      t << ['Destination', 'State', 'Origin']
+      t << :separator
+      run_result.route_tables[0].routes.each do |route|
+        t.add_row [route.destination_cidr_block, route.state, route.origin]
+      end
+    end
+    logv table
+    return {vpc_id: vpc_id, ig_id: ig_id, rt_id: rt_id, subnet_id: subnet_id}
   end
-  
   
   
   #
@@ -224,6 +238,8 @@ class AwsHelper
       exit 5
     end
     
+    vpc_config = createVPC("172.16.0.0/24")
+    
     group_id = getSecurityGroupId(security_group)
     
     #ip_allocation = @ec2.allocate_address()
@@ -239,6 +255,8 @@ class AwsHelper
       image_id: image_id,
       min_count: 1,
       max_count: 1,
+      private_id_address: "172.16.0.1",
+      subnet_id: vpc_config.subnet_id,
       key_name: key[:name],
       security_group_ids: [group_id],
       instance_type: instance_type,
