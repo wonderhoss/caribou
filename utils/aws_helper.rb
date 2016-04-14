@@ -365,6 +365,18 @@ private
 
 
     #
+    # Identifies the primary subnet within the VPC used to deploy hosts
+    #
+    def findSubnet
+        dsc = @ec2.describe_subnets({filters: [
+          {name:"tag:application", values: ["caribou"]}
+        ]})
+        return nil if dsc.subnets.length == 0
+        return dsc.subnets[0]
+    end
+    
+
+    #
     # Creates a new Security Group which allows SSH ingress that can be used for the master node
     #
     def createSecurityGroup(name, public_ip)
