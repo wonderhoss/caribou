@@ -76,12 +76,11 @@ class AwsHelper
     ssh_in_allowed = false
     begin
       result = @ec2.describe_security_groups({
-        group_names: [name]
+        filters: [
+          {name: "group-name", values: [name]},
+          {name: "vpc-id", values: [vpc_id]}
+        ]
       })
-      if result.security_groups[0].vpc_id != vpc_id
-        logv "Existing group does not belong to specified VPC"
-        return createSecurityGroup(name, public_ip, vpc_id)
-      end
       group_id = result.security_groups[0].group_id
       group = Aws::EC2::SecurityGroup.new(group_id, {client: @ec2})
       logv "Existing group found\n"
@@ -208,20 +207,24 @@ class AwsHelper
     #  t.add_row [ip_allocation.public_ip, ip_allocation.allocation_id, ip_allocation.domain]
     #end
     #logv table
-    
-    run_result = @ec2.run_instances({
-      image_id: image_id,
-      min_count: 1,
-      max_count: 1,
-      private_ip_address: "172.16.0.10",
-      subnet_id: vpc_config[:subnet_id],
-      key_name: key[:name],
-      security_group_ids: [group_id],
-      instance_type: instance_type,
-      user_data: Base64.encode64("#!/bin/bash\ntouch /phil_was_here;")
-    })
-    logv "Requested instance launch. Request ID is #{run_result.reservation_id}"
-
+    begin
+      run_result = @ec2.run_instances({
+        image_id: image_id,
+        min_count: 1,
+        max_count: 1,
+        private_ip_address: "172.16.0.10",
+        subnet_id: vpc_config[:subnet_id],
+        key_name: key[:name],
+        security_group_ids: [group_id],
+        instance_type: instance_type,
+        user_data: Base64.encode64("#!/bin/bash\ntouch /phil_was_here;")
+      })
+      logv "Requested instance launch. Request ID is #{run_result.reservation_id}"
+    rescue Aws::EC2::Errors::InvalidIPAddressInUse
+      #TODO: Better check for master node already running
+      puts "Another node is already deployed with master ip 172.16.0.10."
+      return nil
+    end
     #@ec2.associate_address({
     #  instance_id: run_result.instances[0].instance_id,
     #  public_ip: ip_allocation.public_ip
@@ -348,8 +351,8 @@ private
       else
         vpc_id = dsc.vpcs[0].vpc_id
         dsc = @ec2.describe_tags({filters: [
-          {name: "resource-id", values [vpc_id]},
-          {name: "key", values ["setup_complete"]}
+          {name: "resource-id", values: [vpc_id]},
+          {name: "key", values: ["setup_complete"]}
         ]})
         if dsc.tags.length == 0
           puts "Unfinished VPC found. Please clean up manually before retrying."
@@ -541,7 +544,7 @@ private
       subnet_id: subnet_id,
       route_table_id: rt_id
     })
-    logv "Routing Table #{route_table_id} associated with Subnet #{subnet_id}"
+    logv "Routing Table #{rt_id} associated with Subnet #{subnet_id}"
     
     tag(vpc_id, "setup_complete", "true")
     return {vpc_id: vpc_id, ig_id: ig_id, rt_id: rt_id, subnet_id: subnet_id}
