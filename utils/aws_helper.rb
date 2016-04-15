@@ -352,6 +352,8 @@ private
           {name: "key", values ["setup_complete"]}
         ]})
         if dsc.tags.length == 0
+          puts "Unfinished VPC found. Please clean up manually before retrying."
+          exit 5
           #TODO: Unfinished VPC found. Tear down and restart
         else
           logv "Retrieving details for existing VPC #{vpc_id}."
