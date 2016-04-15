@@ -70,19 +70,23 @@ class AwsHelper
   #
   # Queries AWS for the id of a given Security Group
   #
-  def getSecurityGroupId(name = SECURITY_GROUP_DEFAULT)
+  def getSecurityGroupId(name = SECURITY_GROUP_DEFAULT, vpc_id)
     public_ip = open('http://whatismyip.akamai.com').read
     public_ip << "/32"
+    ssh_in_allowed = false
     begin
       result = @ec2.describe_security_groups({
         group_names: [name]
       })
+      if result.security_groups[0].vpc_id != vpc_id
+        logv "Existing group does not belong to specified VPC"
+        return createSecurityGroup(name, public_ip, vpc_id)
+      end
       group_id = result.security_groups[0].group_id
       group = Aws::EC2::SecurityGroup.new(group_id, {client: @ec2})
       logv "Existing group found\n"
       logv "Public IP queried from Akamai: #{public_ip}\n\n"
       logv "Ingress Permissions on existing group:\n"
-      ssh_in_allowed = false
       group.ip_permissions.each do |permission|
         permission.ip_ranges.each do |range|
           cidr = NetAddr::CIDR.create(range.cidr_ip)
@@ -150,16 +154,30 @@ class AwsHelper
     run_result = @ec2.create_vpc({cidr_block: block})
     logv " -> VPC created"
     vpc_id = run_result.vpc.vpc_id
+    loop do
+      begin
+        dsc = @ec2.describe_vpcs({vpc_ids: [vpc_id]})
+      rescue Aws::EC2::Errors::InvalidVpcIdNotFound
+        logv "Waiting for VPC ID (#{vpc_id}) to be recognized..."
+        sleep(5)       
+      end
+      state = dsc.vpcs[0].state
+      break if state == "available"
+      logv "Waiting for VPC (#{state}) to become available..."
+      sleep(5)
+    end
     tagCaribou(vpc_id)
-    run_result = @ec2.create_subnet({vpc_id: vpc_id, cidr_block: block})
-    subnet_id = run_result.subnet.subnet_id
-    tagCaribou(subnet_id)
     table = Terminal::Table.new do |t|
       t << ['VPC ID', 'State', 'CIDR Block', 'Instance Tenancy']
       t << :separator
       t.add_row [run_result.vpc.vpc_id, run_result.vpc.state, run_result.vpc.cidr_block, run_result.vpc.instance_tenancy]
     end
     logv table
+    run_result = @ec2.create_subnet({vpc_id: vpc_id, cidr_block: block})
+    subnet_id = run_result.subnet.subnet_id
+    tagCaribou(subnet_id)
+    run_result = @ec2.modify_subnet_attribute({subnet_id: subnet_id, map_public_ip_on_launch: { value: true }})
+    logv " -> Subnet created"
     
     #TODO: Check for existing gateway first
     run_result = @ec2.create_internet_gateway()
@@ -171,13 +189,13 @@ class AwsHelper
     
     #TODO: Check for existing routing table first
     run_result = @ec2.create_route_table({vpc_id: vpc_id})
-    rt_id = run_resule.route_table.route_table_id
-    tagCaribou(tr_id)
+    rt_id = run_result.route_table.route_table_id
+    tagCaribou(rt_id)
     logv " -> Routing Table created"
     run_result = @ec2.create_route({route_table_id: rt_id, gateway_id: ig_id, destination_cidr_block: "0.0.0.0/0"})
     logv " -> Internet Gateway Route added"
     
-    run_result = @ec2.describe_route-tables({route_table_ids: [ir_id]})
+    run_result = @ec2.describe_route_tables({route_table_ids: [rt_id]})
     table = Terminal::Table.new do |t|
       t << ['Destination', 'State', 'Origin']
       t << :separator
@@ -186,6 +204,12 @@ class AwsHelper
       end
     end
     logv table
+    
+    run_result = @ec2.associate_route_table({
+      subnet_id: subnet_id,
+      route_table_id: rt_id
+    })
+    
     return {vpc_id: vpc_id, ig_id: ig_id, rt_id: rt_id, subnet_id: subnet_id}
   end
   
@@ -239,9 +263,9 @@ class AwsHelper
     end
     
     vpc_config = createVPC("172.16.0.0/24")
-    
-    group_id = getSecurityGroupId(security_group)
-    
+    group_id = getSecurityGroupId(security_group, vpc_config[:vpc_id])
+    #TODO: Check that security group belongs to same subnet
+   
     #ip_allocation = @ec2.allocate_address()
     #logv "Allocated IP address:"
     #table = Terminal::Table.new do |t|
@@ -255,8 +279,8 @@ class AwsHelper
       image_id: image_id,
       min_count: 1,
       max_count: 1,
-      private_id_address: "172.16.0.1",
-      subnet_id: vpc_config.subnet_id,
+      private_ip_address: "172.16.0.10",
+      subnet_id: vpc_config[:subnet_id],
       key_name: key[:name],
       security_group_ids: [group_id],
       instance_type: instance_type,
@@ -379,14 +403,26 @@ private
     #
     # Creates a new Security Group which allows SSH ingress that can be used for the master node
     #
-    def createSecurityGroup(name, public_ip)
+    def createSecurityGroup(name, public_ip, vpc_id)
       begin
-        logv "Creating Caribou Default Security Group."
-        result = @ec2.create_security_group({
-          group_name: name,
-          description: "Created from Ruby SDK"
-        })
+        if vpc_id != nil
+          logv "Creating Caribou Default Security Group for VPC #{vpc_id}."
+            result = @ec2.create_security_group({
+            group_name: name,
+            description: "Created from Ruby SDK",
+            vpc_id: vpc_id
+          })
+        else
+          logv "Creating Caribou Default Security Group."
+          result = @ec2.create_security_group({
+            group_name: name,
+            description: "Created from Ruby SDK"
+          })
+        end
         group_id = result.data.group_id
+        #TODO: Wait for security group to be created properly
+        sleep 5
+        logv "Security Group #{group_id} created."
         tagCaribou(group_id)
         group = Aws::EC2::SecurityGroup.new(group_id, {client: @ec2})
         logv "Adding SSH ingress rule for #{public_ip}"
