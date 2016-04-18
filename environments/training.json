@@ -1,3 +1,16 @@
 {
-  name: "Training"
+  "name": "Test",
+  "swarms": [{
+    "no": 5,
+    "lb": false,
+    "name": "swarm 1",
+    "role": "role1",
+    "ami": "12345"
+  }, {
+    "no": 2,
+    "lb": true,
+    "name": "swarm 2",
+    "role": "role2",
+    "ami": "12345"
+  }]
 }
