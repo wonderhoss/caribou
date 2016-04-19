@@ -151,6 +151,13 @@ class AwsHelper
   # Deploys a new EC2 instance to use as master node
   #
   def deployMaster(security_group, keyname = nil, instance_type = "t1.micro", image_id = "ami-7b386c11", pubkey = nil)
+    nodes = findMasterNode()
+    if !nodes.nil?
+        puts "A Caribou master node is already running:"
+        puts masterStatus
+        exit 5
+    end
+    
     if keyname.nil?
       if pubkey.nil?
         if @newkey
