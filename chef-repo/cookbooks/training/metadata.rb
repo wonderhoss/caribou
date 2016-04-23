@@ -1,0 +1,7 @@
+name 'training'
+maintainer 'The Authors'
+maintainer_email 'you@example.com'
+license 'all_rights'
+description 'Installs/Configures training'
+long_description 'Installs/Configures training'
+version '0.1.0'
