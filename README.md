@@ -1,8 +1,11 @@
 # Caribou - An Extensible AWS deployment framework
 
 ##Requirements
+Gems:
 * AWS SDK for Ruby v2
 * NetAddr
+* net-ssh
+* net-scp
 * terminal-table (https://github.com/tj/terminal-table)
 
 * Uses Akamai's public IP service (http://whatismyip.akamai.com)
