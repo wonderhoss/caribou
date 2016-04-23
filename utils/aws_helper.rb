@@ -1,5 +1,6 @@
 require 'aws-sdk'
 require_relative 'verbose.rb'
+require_relative 'chef_provision_helper.rb'
 require 'netaddr'
 require 'open-uri'
 require 'terminal-table'
@@ -37,6 +38,7 @@ class AwsHelper
     @credentials = Aws::Credentials.new(options[:awskey_id], options[:awskey])
     logv "INIT: Credentials valid? #{@credentials.set?}"
     @ec2 = Aws::EC2::Client.new({credentials: @credentials, region: @region})
+    @chef_helper = ChefHelper.new(options)
   end
   
   #
@@ -215,6 +217,13 @@ class AwsHelper
     #  t.add_row [ip_allocation.public_ip, ip_allocation.allocation_id, ip_allocation.domain]
     #end
     #logv table
+    
+    if @chef_helper.find_file("vendor", "chef-server-core_12.5.0-1_amd64.deb")
+      logv "Chef Server installer package already found on S3"
+    else
+      @chef_helper.upload_file("vendor", "#{@options[:basedir]}/vendor/chef-server-core_12.5.0-1_amd64.deb")
+    end
+    
     begin
       run_result = @ec2.run_instances({
         image_id: image_id,
@@ -225,7 +234,7 @@ class AwsHelper
         key_name: key[:name],
         security_group_ids: [group_id],
         instance_type: instance_type,
-        user_data: Base64.encode64("#!/bin/bash\ntouch /phil_was_here;")
+        user_data: Base64.encode64(@chef_helper.get_cloudinit_script)
       })
       logv "Requested instance launch. Request ID is #{run_result.reservation_id}"
     rescue Aws::EC2::Errors::InvalidIPAddressInUse
@@ -252,7 +261,17 @@ class AwsHelper
     tag(run_result.instances[0].instance_id, "node_type", "master")
     
     logv "Public IP address found: #{instance_public_ip}"
+    puts "Waiting for cloud-init to finish bootstrapping Chef server. This will some time."
+    sleep 60
     
+    #TODO: Display rolling update of instance's cloud-init-output if verbose logging enabled
+    
+    while (!@chef_helper.cloud_init_complete?(instance_public_ip, key[:name]))
+        print "."
+        sleep 20
+    end
+    print "\n"
+    puts
     table = Terminal::Table.new do |t|
       t << ['Instance ID', 'Type', 'Public IP', 'State']
       t << :separator
