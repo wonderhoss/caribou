@@ -1,6 +1,7 @@
 require_relative 'verbose.rb'
 require 'aws-sdk'
 require 'net/ssh'
+require 'net/scp'
 
 #TODO: Error handling on bucket check and file upload
 
@@ -88,7 +89,7 @@ class ChefHelper
     raise ArgumentError.new("Keyfile #{key_name}.pem not found") unless File.readable?("#{@options[:basedir]}/#{key_name}.pem")
     keys = File.read("#{@options[:basedir]}/#{key_name}.pem")
     begin
-      Net::SSH.start(instance_ip, "ubuntu", :keys => [], :key_data => keys, :keys_only => true) do |ssh|
+      Net::SSH.start(instance_ip, "ubuntu", keys: [], key_data: keys, keys_only: true) do |ssh|
         result = ssh.exec!("sudo bash -c \"if test -e /root/cloud-init.complete; then echo \"complete\"; else echo \"pending\"; fi\"")
         return true if result.chomp == "complete"
         return false
@@ -98,6 +99,15 @@ class ChefHelper
       try +=1
       retry if try < 6
     end
+  end
+  
+  def transfer_chef_repo(instance_ip, key_name)
+    raise ArgumentError.new("Keyfile #{key_name}.pem not found") unless File.readable?("#{@options[:basedir]}/#{key_name}.pem")
+    keys = File.read("#{@options[:basedir]}/#{key_name}.pem")
+    Net::SSH.start(instance_ip, "ubuntu", keys: [], key_data: keys, keys_only: true) do |ssh|
+      ssh.scp.upload!("#{@options[:basedir]}/chef-repo", "/home/ubuntu/chef-repo", recursive: true)
+    end
+      
   end
     
 end

@@ -146,7 +146,7 @@ class AwsHelper
   end
   
   
-  
+
 
   
   
@@ -222,6 +222,11 @@ class AwsHelper
       logv "Chef Server installer package already found on S3"
     else
       @chef_helper.upload_file("vendor", "#{@options[:basedir]}/vendor/chef-server-core_12.5.0-1_amd64.deb")
+    end
+    if @chef_helper.find_file("vendor", "chefdk_0.12.0-1_amd64.deb")
+      logv "Chef Server installer package already found on S3"
+    else
+      @chef_helper.upload_file("vendor", "#{@options[:basedir]}/vendor/chefdk_0.12.0-1_amd64.deb")
     end
     
     begin
@@ -337,7 +342,7 @@ class AwsHelper
   end
 
 
-private
+#private
 
     #
     # Identifies all non-terminated EC2 instances that are tagged as master node in this region
@@ -352,6 +357,7 @@ private
       return dsc.reservations[0].instances
     end
 
+private
 
     #
     # Identifies the primary subnet within the VPC used to deploy hosts

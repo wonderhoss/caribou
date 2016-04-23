@@ -9,6 +9,7 @@ export AWS_SECRET_ACCESS_KEY=%{secret}
 export AWS_DEFAULT_REGION=%{region}
 export HOME=/root
 aws s3 cp s3://%{caribou_folder}/vendor/chef-server-core_12.5.0-1_amd64.deb /tmp
+aws s3 cp s3://%{caribou_folder}/vendor/chefdk_0.12.0-1_amd64.deb /tmp
 dpkg -i /tmp/chef-server-core_12.5.0-1_amd64.deb
 chef-server-ctl reconfigure
 mkdir /root/chef-certs
@@ -18,4 +19,5 @@ sudo chef-server-ctl org-create caribou 'Caribou' --association_user caribou --f
 chef-server-ctl install chef-manage
 chef-server-ctl reconfigure
 chef-manage-ctl reconfigure
+dpkg -i /tmp/chefdk_0.12.0-1_amd64.deb
 touch /root/cloud-init.complete
