@@ -81,14 +81,7 @@ class AwsHelper
           {name: "vpc-id", values: [vpc_id]}
         ]
       })
-<<<<<<< HEAD
-      if result.security_groups[0].vpc_id != vpc_id
-        logv "Existing group does not belong to specified VPC"
-        return createSecurityGroup(name, public_ip, vpc_id)
-      end
-=======
       return createSecurityGroup(name, public_ip, vpc_id) if result.security_groups.length == 0
->>>>>>> robust_vpc
       group_id = result.security_groups[0].group_id
       group = Aws::EC2::SecurityGroup.new(group_id, {client: @ec2})
       logv "Existing group found\n"
@@ -152,77 +145,7 @@ class AwsHelper
   
   
   
-<<<<<<< HEAD
-  #
-  # Create VPC, Internet Gateway and Routing Table
-  #
-  def createVPC(block)
-    #TODO: Check for existing VPC first
-    puts "Creating and configuring Caribou VPC"
-    run_result = @ec2.create_vpc({cidr_block: block})
-    logv " -> VPC created"
-    vpc_id = run_result.vpc.vpc_id
-    loop do
-      begin
-        dsc = @ec2.describe_vpcs({vpc_ids: [vpc_id]})
-      rescue Aws::EC2::Errors::InvalidVpcIdNotFound
-        logv "Waiting for VPC ID (#{vpc_id}) to be recognized..."
-        sleep(5)       
-      end
-      state = dsc.vpcs[0].state
-      break if state == "available"
-      logv "Waiting for VPC (#{state}) to become available..."
-      sleep(5)
-    end
-    tagCaribou(vpc_id)
-    table = Terminal::Table.new do |t|
-      t << ['VPC ID', 'State', 'CIDR Block', 'Instance Tenancy']
-      t << :separator
-      t.add_row [run_result.vpc.vpc_id, run_result.vpc.state, run_result.vpc.cidr_block, run_result.vpc.instance_tenancy]
-    end
-    logv table
-    run_result = @ec2.create_subnet({vpc_id: vpc_id, cidr_block: block})
-    subnet_id = run_result.subnet.subnet_id
-    tagCaribou(subnet_id)
-    run_result = @ec2.modify_subnet_attribute({subnet_id: subnet_id, map_public_ip_on_launch: { value: true }})
-    logv " -> Subnet created"
-    
-    #TODO: Check for existing gateway first
-    run_result = @ec2.create_internet_gateway()
-    ig_id = run_result.internet_gateway.internet_gateway_id
-    tagCaribou(ig_id)
-    logv " -> Internet Gateway created"
-    run_result = @ec2.attach_internet_gateway({internet_gateway_id: ig_id, vpc_id: vpc_id})
-    logv " -> Internet Gateway attached to VPC"
-    
-    #TODO: Check for existing routing table first
-    run_result = @ec2.create_route_table({vpc_id: vpc_id})
-    rt_id = run_result.route_table.route_table_id
-    tagCaribou(rt_id)
-    logv " -> Routing Table created"
-    run_result = @ec2.create_route({route_table_id: rt_id, gateway_id: ig_id, destination_cidr_block: "0.0.0.0/0"})
-    logv " -> Internet Gateway Route added"
-    
-    run_result = @ec2.describe_route_tables({route_table_ids: [rt_id]})
-    table = Terminal::Table.new do |t|
-      t << ['Destination', 'State', 'Origin']
-      t << :separator
-      run_result.route_tables[0].routes.each do |route|
-        t.add_row [route.destination_cidr_block, route.state, route.origin]
-      end
-    end
-    logv table
-    
-    run_result = @ec2.associate_route_table({
-      subnet_id: subnet_id,
-      route_table_id: rt_id
-    })
-    
-    return {vpc_id: vpc_id, ig_id: ig_id, rt_id: rt_id, subnet_id: subnet_id}
-  end
-=======
 
->>>>>>> robust_vpc
   
   
   #
@@ -280,11 +203,7 @@ class AwsHelper
       exit 5
     end
     
-<<<<<<< HEAD
-    vpc_config = createVPC("172.16.0.0/24")
-=======
     vpc_config = findVPC()
->>>>>>> robust_vpc
     group_id = getSecurityGroupId(security_group, vpc_config[:vpc_id])
     #TODO: Check that security group belongs to same subnet
    
@@ -296,22 +215,6 @@ class AwsHelper
     #  t.add_row [ip_allocation.public_ip, ip_allocation.allocation_id, ip_allocation.domain]
     #end
     #logv table
-<<<<<<< HEAD
-    
-    run_result = @ec2.run_instances({
-      image_id: image_id,
-      min_count: 1,
-      max_count: 1,
-      private_ip_address: "172.16.0.10",
-      subnet_id: vpc_config[:subnet_id],
-      key_name: key[:name],
-      security_group_ids: [group_id],
-      instance_type: instance_type,
-      user_data: Base64.encode64("#!/bin/bash\ntouch /phil_was_here;")
-    })
-    logv "Requested instance launch. Request ID is #{run_result.reservation_id}"
-
-=======
     begin
       run_result = @ec2.run_instances({
         image_id: image_id,
@@ -330,7 +233,6 @@ class AwsHelper
       puts "Another node is already deployed with master ip 172.16.0.10."
       return nil
     end
->>>>>>> robust_vpc
     #@ec2.associate_address({
     #  instance_id: run_result.instances[0].instance_id,
     #  public_ip: ip_allocation.public_ip
@@ -445,8 +347,6 @@ private
     
 
     #
-<<<<<<< HEAD
-=======
     # Identifies the Caribou default VPC
     #
     def findVPC
@@ -493,7 +393,6 @@ private
     
     
     #
->>>>>>> robust_vpc
     # Creates a new Security Group which allows SSH ingress that can be used for the master node
     #
     def createSecurityGroup(name, public_ip, vpc_id)
