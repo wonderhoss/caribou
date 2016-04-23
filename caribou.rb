@@ -1,5 +1,6 @@
 require_relative 'utils/parameter_parser.rb'
 require_relative 'utils/aws_helper.rb'
+require_relative 'utils/chef_provision_helper.rb'
 require_relative 'utils/verbose.rb'
 
 include Verbose
@@ -31,7 +32,7 @@ begin
   @options[:basedir] = File.expand_path(File.dirname(__FILE__))
 
   helper = AwsHelper.new(@options)
-
+  chef_helper = ChefHelper.new(@options)
   case @command
   when "list"
     puts "Available AWS Regions:"
@@ -55,6 +56,15 @@ begin
     puts "Shutting down Caribou Cluster"
     puts
     helper.shutdown()
+  when "upload-chef"
+    puts "Uploading repo to server"
+    puts
+    node = helper.findMasterNode[0]
+    if node.nil?
+      puts "Master node not running"
+      exit 1
+    end
+    chef_helper.transfer_chef_repo(node.public_ip_address, @options[:key_name])
   else
     STDERR.puts "Unknown command '#{@command}'"
     exit 1
