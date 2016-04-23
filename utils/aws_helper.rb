@@ -81,6 +81,7 @@ class AwsHelper
           {name: "vpc-id", values: [vpc_id]}
         ]
       })
+      return createSecurityGroup(name, public_ip, vpc_id) if result.security_groups.length == 0
       group_id = result.security_groups[0].group_id
       group = Aws::EC2::SecurityGroup.new(group_id, {client: @ec2})
       logv "Existing group found\n"
@@ -115,7 +116,7 @@ class AwsHelper
         raise e
       else
         logv "Caribou Default Security Group does not exist."
-        return createSecurityGroup(name, public_ip)
+        return createSecurityGroup(name, public_ip, vpc_id)
       end
     end
   end
@@ -421,6 +422,20 @@ private
           cidr_ip: public_ip,
           from_port: 22,
           to_port: 22,
+          ip_protocol: "tcp"
+        })
+        logv "Adding HTTPS ingress rule for #{public_ip}"
+        group.authorize_ingress({
+          cidr_ip: public_ip,
+          from_port: 443,
+          to_port: 443,
+          ip_protocol: "tcp"
+        })
+        logv "Adding port 8443 ingress rule for #{public_ip}"
+        group.authorize_ingress({
+          cidr_ip: public_ip,
+          from_port: 8443,
+          to_port: 8443,
           ip_protocol: "tcp"
         })
         logv "New group #{name} created with id #{group_id}\nGroup tagged with \"application:caribou\"."
