@@ -28,6 +28,8 @@ begin
   logv("Running command #{@command} with config:\n#{@options}")
   puts
 
+  @options[:basedir] = File.expand_path(File.dirname(__FILE__))
+
   helper = AwsHelper.new(@options)
 
   case @command
