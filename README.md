@@ -24,15 +24,24 @@ Usage: C:/Users/pita/dev/caribou/caribou.rb <command> [options]
 Command can be one of:
 list       - List all AWS regions available with the credentials provided
 getsgid    - Get the ID of the default AWS Security Group Caribou will use
+deploy_master - Deploy the Caribou Master Node
+master_status - Get the status of the currently deployed Caribou Master Node
+shutdown   - Shutdown the Caribou Cluster
 
 Specific options:
-    -k, --awskeyid ID                      The AWS key ID to use
-    -r, --region REGION                    The AWS region to use
-    -s GROUPNAME, --security-group-name    The AWS EC2 Security Group name to use
-    -f, --cfgfile FILE                     Load configuration from FILE
-    -v, --verbose                          Show verbose logging
-    -h, --help                             Show this message
-        --version                          Show version information
+    -a, --awskeyid ID                The AWS key ID to use
+    -r, --region REGION              The AWS region to use
+    -k, --keypair-name NAME          The key pair name to use for master node
+    -i, -master-instance-type TYPE
+    -t, --master-image-id ID
+    -s GROUPNAME,                    The AWS EC2 Security Group name to use
+        --security-group-name
+        --new-key                    When deploying a new EC2 instance, also create a new keypair if none is provided
+        --key-file FILE              SSH public key to import
+    -f, --cfgfile FILE               Load configuration from FILE
+    -v, --verbose                    Show verbose logging
+    -h, --help                       Show this message
+        --version                    Show version information
 ```
 
 ##Notes
