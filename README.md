@@ -26,6 +26,7 @@ list       - List all AWS regions available with the credentials provided
 getsgid    - Get the ID of the default AWS Security Group Caribou will use
 deploy_master - Deploy the Caribou Master Node
 master_status - Get the status of the currently deployed Caribou Master Node
+deploy_environment - Deploy an environment based on the corresponding JSON file
 shutdown   - Shutdown the Caribou Cluster
 
 Specific options:
@@ -38,6 +39,7 @@ Specific options:
         --security-group-name
         --new-key                    When deploying a new EC2 instance, also create a new keypair if none is provided
         --key-file FILE              SSH public key to import
+    -e ENVIRONMENT                   The name of the environment to deploy
     -f, --cfgfile FILE               Load configuration from FILE
     -v, --verbose                    Show verbose logging
     -h, --help                       Show this message
