@@ -1,6 +1,7 @@
 require 'aws-sdk'
 require_relative 'verbose.rb'
 require_relative 'chef_provision_helper.rb'
+require_relative 'env_parser.rb'
 require 'netaddr'
 require 'open-uri'
 require 'terminal-table'
@@ -24,6 +25,7 @@ class AwsHelper
   #
   def initialize(options = {})
     @verbose = options[:verbose]
+    @basedir = options[:basedir]
     
     if !options.has_key?(:awskey_id)
       raise ArgumentError.new("AWS Key ID required")
@@ -146,7 +148,60 @@ class AwsHelper
   end
   
   
-
+  def deployEnvironment(environment_name)
+    env_filename = "#{@basedir}/environments/#{environment_name}.json"
+    if !File.readable?(env_filename)
+        puts "Environment description #{env_filename} does not exist."
+        exit 2
+    end
+    begin
+      environment = EnvironmentParser::parseEnv(File.read(env_filename))
+    rescue EnvironmentParser::EnvironmentParseError => e
+      puts "Failed to parse environment description #{env_filename}: #{e}"
+      exit 2
+    end
+    master = findMasterNode
+    if master.nil?
+      puts "Master node does not seem to be up. Cannot deploy Environment."
+      exit 5
+    end
+    master = master[0]
+    master_ip = master.network_interfaces[0].private_ip_address
+    #TODO: Get keyname from environment file to allow for separate keys for each swarm
+    #TODO: Assumes that master will only ever have one group. Better way to identify group required. Maybe from env again.
+    security_group_id = master.security_groups[0].group_id
+    environment[:swarms].each do |swarm|
+      logv "Deploying Swarm #{swarm[:name]}:"
+      logv swarm
+      if swarm[:lb]
+        #TODO: Set up load balancer
+      end
+      if swarm[:asg]
+        #TODO: Set up auto-scaling group and run configuration
+      else
+        swarm[:instance_count].times do |i|
+          init_script = @chef_helper.get_node_cloudinit_script(master_ip, "caribou-#{swarm[:name]}-#{i}", swarm[:role])
+          run_result = @ec2.run_instances({
+            image_id: swarm[:ami],
+            min_count: 1,
+            max_count: 1,
+            subnet_id: master.subnet_id,
+            key_name: master.key_name,
+            security_group_ids: [security_group_id],
+            instance_type: swarm[:instance_type],
+            user_data: Base64.encode64(init_script)
+          })
+          tagCaribou(run_result.instances[0].instance_id)
+          tag(run_result.instances[0].instance_id, "node_type", "swarm-node")
+          tag(run_result.instances[0].instance_id, "Name", "caribou-#{swarm[:name]}-#{i}")
+          tag(run_result.instances[0].instance_id, "environment", environment_name)
+          tag(run_result.instances[0].instance_id, "swarm", swarm[:name])
+          logv "Requested instance launch for caribou-#{swarm[:name]}-#{i}. Request ID is #{run_result.reservation_id}"
+        end
+      end
+      puts "Done with Environment #{environment_name}"
+    end
+  end
 
   
   
@@ -154,7 +209,7 @@ class AwsHelper
   # Deploys a new EC2 instance to use as master node
   #
   def deployMaster(security_group, keyname = nil, instance_type = "t1.micro", image_id = "ami-7b386c11", pubkey = nil)
-    nodes = findMasterNode()
+    nodes = findMasterNode
     if !nodes.nil?
         puts "A Caribou master node is already running:"
         puts masterStatus
@@ -165,7 +220,7 @@ class AwsHelper
       if pubkey.nil?
         if @newkey
           puts "Creating new key pair..."
-          key = createKeypair()
+          key = createKeypair
         else
           puts "ERROR: No keypair provided and --new-key not supplied."
           puts "ERROR: Unable to deploy."
@@ -221,12 +276,12 @@ class AwsHelper
     if @chef_helper.find_file("vendor", "chef-server-core_12.5.0-1_amd64.deb")
       logv "Chef Server installer package already found on S3"
     else
-      @chef_helper.upload_file("vendor", "#{@options[:basedir]}/vendor/chef-server-core_12.5.0-1_amd64.deb")
+      @chef_helper.upload_file("vendor", "#{@basedir}/vendor/chef-server-core_12.5.0-1_amd64.deb")
     end
     if @chef_helper.find_file("vendor", "chefdk_0.12.0-1_amd64.deb")
       logv "Chef Server installer package already found on S3"
     else
-      @chef_helper.upload_file("vendor", "#{@options[:basedir]}/vendor/chefdk_0.12.0-1_amd64.deb")
+      @chef_helper.upload_file("vendor", "#{@basedir}/vendor/chefdk_0.12.0-1_amd64.deb")
     end
     
     begin
@@ -239,7 +294,7 @@ class AwsHelper
         key_name: key[:name],
         security_group_ids: [group_id],
         instance_type: instance_type,
-        user_data: Base64.encode64(@chef_helper.get_cloudinit_script)
+        user_data: Base64.encode64(@chef_helper.get_master_cloudinit_script)
       })
       logv "Requested instance launch. Request ID is #{run_result.reservation_id}"
     rescue Aws::EC2::Errors::InvalidIPAddressInUse
@@ -264,6 +319,7 @@ class AwsHelper
     
     tagCaribou(run_result.instances[0].instance_id)
     tag(run_result.instances[0].instance_id, "node_type", "master")
+    tag(run_result.instances[0].instance_id, "Name", "caribou-master")
     
     logv "Public IP address found: #{instance_public_ip}"
     puts "Waiting for cloud-init to finish bootstrapping Chef server. This will some time."

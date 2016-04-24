@@ -76,9 +76,16 @@ class ChefHelper
     puts resp
   end
     
-  def get_cloudinit_script
+  def get_master_cloudinit_script
     template = File.read("#{@options[:basedir]}/infra/scripts/deploy-chef-template.sh")
     vals = {key: @options[:awskey_id], secret: @options[:awskey], region: @region, caribou_folder: @options[:s3_bucket], chef_email: @options[:chef_email], chef_password: @options[:chef_password]}
+    script = template % vals
+    return script
+  end
+  
+  def get_node_cloudinit_script(master_ip, nodename, role)
+    template = File.read("#{@options[:basedir]}/infra/scripts/init-node-template.sh")
+    vals = {key: @options[:awskey_id], secret: @options[:awskey], region: @region, caribou_folder: @options[:s3_bucket], nodename: nodename, master_ip: master_ip, role: role}
     script = template % vals
     return script
   end

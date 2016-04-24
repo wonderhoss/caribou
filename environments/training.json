@@ -1,26 +1,12 @@
 {
-  "name": "Test",
-  "subnet": "192.168.1.0/24"),
+  "name": "Training",
   "swarms": [{
-    "instance_count": 5,
+    "instance_count": 3,
+    "instance_type": "t2.micro",
+    "asg": false,
     "lb": false,
-    "name": "swarm 1",
-    "role": "role1",
-    "ami": "12345"
-  }, {
-    "instance_count": 2,
-    "lb": true,
-    "name": "swarm 2",
-    "role": "role2",
-    "ami": "12345"
-  }, {
-    "name" : "swarm asg",
-    "lb" : true,
-    "role" : "asg role",
-    "ami": "12345",
-    "asg" : {
-      "min" : 1,
-      "max" : 10
-    }
+    "name": "web",
+    "role": "training_server",
+    "ami": "ami-fce3c696"
   }]
 }
