@@ -1,0 +1,12 @@
+{
+  "name": "Production",
+  "swarms": [{
+    "instance_count": 1,
+    "instance_type": "t2.micro",
+    "asg": false,
+    "lb": false,
+    "name": "web",
+    "role": "training_server",
+    "ami": "ami-fce3c696"
+  }]
+}

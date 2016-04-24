@@ -24,4 +24,6 @@ chef-server-ctl reconfigure
 chef-manage-ctl reconfigure
 dpkg -i /tmp/chefdk_0.12.0-1_amd64.deb
 aws s3 cp /root/chef-certs/CARIBOU-validator.pem s3://%{caribou_folder}/chef/CARIBOU-validator.pem
+cp /root/chef-certs/caribou.pem /home/ubuntu/
+cp /var/opt/opscode/nginx/ca/caribou-master.crt /home/ubuntu/
 touch /root/cloud-init.complete

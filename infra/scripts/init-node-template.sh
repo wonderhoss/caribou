@@ -41,4 +41,16 @@ EOP
 ) > /etc/chef/client.rb
 
 chef-client -j /etc/chef/first-boot.json
+
+(
+cat << 'EOC'
+00 *    * * *   root    . $HOME/.profile;  /usr/local/rvm/gems/ruby-2.3.0/bin/chef-client
+10 *    * * *   root    . $HOME/.profile;  /usr/local/rvm/gems/ruby-2.3.0/bin/chef-client
+20 *    * * *   root    . $HOME/.profile;  /usr/local/rvm/gems/ruby-2.3.0/bin/chef-client
+30 *    * * *   root    . $HOME/.profile;  /usr/local/rvm/gems/ruby-2.3.0/bin/chef-client
+40 *    * * *   root    . $HOME/.profile;  /usr/local/rvm/gems/ruby-2.3.0/bin/chef-client
+50 *    * * *   root    . $HOME/.profile;  /usr/local/rvm/gems/ruby-2.3.0/bin/chef-client
+
+EOC
+) >> /etc/crontab
 touch /root/cloud-init.complete
