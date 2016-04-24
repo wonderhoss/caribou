@@ -10,6 +10,7 @@ module AwsParser
               'getsgid' => "Get the ID of the default AWS Security Group Caribou will use",
               'deploy_master' => "Deploy the Caribou Master Node",
               'master_status' => "Get the status of the currently deployed Caribou Master Node",
+              'update_chef_repo' => "Upload the Chef repo to the master node",
               'shutdown' => "Shutdown the Caribou Cluster"
               }
   @options =  {:awsregion => "us-east-1"}
@@ -47,6 +48,10 @@ module AwsParser
       
       opts.on("-s", "--security-group-name GROUPNAME", "The AWS EC2 Security Group name to use") do |name|
         @options[:securitygroup_name] = name
+      end
+      
+      opts.on("-e", "--environment ENVIRONMENT", "The environment name to deploy with deploy_environment") do |environment|
+        @options[:environment_name] = environment
       end
       
       opts.on("--new-key", "When deploying a new EC2 instance, also create a new keypair if none is provided") do |newkey|

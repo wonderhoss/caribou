@@ -56,15 +56,19 @@ begin
     puts "Shutting down Caribou Cluster"
     puts
     helper.shutdown()
-  when "upload-chef"
-    puts "Uploading repo to server"
-    puts
+  when "update-chef-repo"
     node = helper.findMasterNode[0]
     if node.nil?
-      puts "Master node not running"
+      puts "ERROR: Master node not running"
       exit 1
     end
+    puts "Uploading chef repo to server"
+    puts
     chef_helper.transfer_chef_repo(node.public_ip_address, @options[:key_name])
+  when "deploy_environment"
+    puts "Deploying Environment #{@options[:environment_name]}"
+    puts
+    helper.deployEnvironment(@options[:environment_name])
   else
     STDERR.puts "Unknown command '#{@command}'"
     exit 1
