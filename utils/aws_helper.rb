@@ -38,7 +38,6 @@ class AwsHelper
     @region = options.fetch(:awsregion, "us-east-1")
     Aws.use_bundled_cert!
     @credentials = Aws::Credentials.new(options[:awskey_id], options[:awskey])
-    logv "INIT: Credentials valid? #{@credentials.set?}"
     @ec2 = Aws::EC2::Client.new({credentials: @credentials, region: @region})
     @chef_helper = ChefHelper.new(options)
   end
@@ -179,8 +178,10 @@ class AwsHelper
       if swarm[:asg]
         #TODO: Set up auto-scaling group and run configuration
       else
+        swarm_instances = []
         swarm[:instance_count].times do |i|
-          init_script = @chef_helper.get_node_cloudinit_script(master_ip, "caribou-#{swarm[:name]}-#{i}", swarm[:role])
+          nodename = "caribou-#{environment_name}-#{swarm[:name]}-#{i}"
+          init_script = @chef_helper.get_node_cloudinit_script(master_ip, nodename, swarm[:role])
           run_result = @ec2.run_instances({
             image_id: swarm[:ami],
             min_count: 1,
@@ -191,15 +192,30 @@ class AwsHelper
             instance_type: swarm[:instance_type],
             user_data: Base64.encode64(init_script)
           })
+          swarm_instances.push(run_result.instances[0].instance_id)
           tagCaribou(run_result.instances[0].instance_id)
           tag(run_result.instances[0].instance_id, "node_type", "swarm-node")
-          tag(run_result.instances[0].instance_id, "Name", "caribou-#{swarm[:name]}-#{i}")
+          tag(run_result.instances[0].instance_id, "Name", nodename)
           tag(run_result.instances[0].instance_id, "environment", environment_name)
           tag(run_result.instances[0].instance_id, "swarm", swarm[:name])
           logv "Requested instance launch for caribou-#{swarm[:name]}-#{i}. Request ID is #{run_result.reservation_id}"
         end
+        sleep(15)
+        dsc = @ec2.describe_instances(instance_ids: swarm_instances)
+        puts "Swarm #{swarm[:name]} deployed:"
+        puts
+        table = Terminal::Table.new do |t|
+          t << ['Instance ID', 'Public IP', 'State']
+          t << :separator
+          dsc.reservations.each do |res|
+            res.instances.each do |instance|
+              t.add_row [instance.instance_id, instance.public_ip_address, instance.state.name]              
+            end
+          end
+        end
+        puts table        
       end
-      puts "Done with Environment #{environment_name}"
+      puts "Done with Environment #{environment_name}."
     end
   end
 
@@ -274,14 +290,18 @@ class AwsHelper
     #logv table
     
     if @chef_helper.find_file("vendor", "chef-server-core_12.5.0-1_amd64.deb")
-      logv "Chef Server installer package already found on S3"
+      logv "Chef Server package already found on S3"
     else
+      logv "Uploading Chef Server package to S3"
       @chef_helper.upload_file("vendor", "#{@basedir}/vendor/chef-server-core_12.5.0-1_amd64.deb")
+      logv "Chef Server package uploaded"
     end
     if @chef_helper.find_file("vendor", "chefdk_0.12.0-1_amd64.deb")
-      logv "Chef Server installer package already found on S3"
+      logv "ChefDK package already found on S3"
     else
+      logv "Uploading ChefDK package to S3"
       @chef_helper.upload_file("vendor", "#{@basedir}/vendor/chefdk_0.12.0-1_amd64.deb")
+      logv "ChefDK package uploaded"
     end
     
     begin
@@ -505,18 +525,18 @@ private
           to_port: 22,
           ip_protocol: "tcp"
         })
-        logv "Adding HTTPS ingress rule for #{public_ip}"
+        logv "Adding HTTP ingress rule for #{public_ip}"
         group.authorize_ingress({
-          cidr_ip: public_ip,
-          from_port: 443,
-          to_port: 443,
+          cidr_ip: "0.0.0.0/0",
+          from_port: 80,
+          to_port: 80,
           ip_protocol: "tcp"
         })
-        logv "Adding port 8443 ingress rule for #{public_ip}"
+        logv "Adding HTTPS ingress rule for #{public_ip}"
         group.authorize_ingress({
-          cidr_ip: public_ip,
-          from_port: 8443,
-          to_port: 8443,
+          cidr_ip: "0.0.0.0/0",
+          from_port: 443,
+          to_port: 443,
           ip_protocol: "tcp"
         })
         logv "New group #{name} created with id #{group_id}\nGroup tagged with \"application:caribou\"."
@@ -540,15 +560,27 @@ private
     # Tags a given resource
     #
     def tag(resource, key, value)
-      @ec2.create_tags({
-        resources: [ resource ],
-        tags: [
-           {
-             key: key,
-             value: value
-           }
-        ]
-      })
+      attempts = 1
+      begin
+        @ec2.create_tags({
+          resources: [ resource ],
+          tags: [
+             {
+               key: key,
+               value: value
+             }
+          ]
+        })
+      rescue => e
+        if attempts > 0
+          logv "Fail to apply tag. AWS seems to do that sometimes. Will retry once..."
+          attempts-=1
+          sleep 5
+          retry
+        else
+           puts "WARN: Fail to apply tag #{key} to resource #{resource}: #{e}"
+        end     
+      end
     end
 
 
@@ -605,6 +637,7 @@ private
       sleep(5)
     end
     tagCaribou(vpc_id)
+    tag(vpc_id, "Name", "Caribou VPC")
     table = Terminal::Table.new do |t|
       t << ['VPC ID', 'State', 'CIDR Block', 'Instance Tenancy']
       t << :separator

@@ -26,7 +26,6 @@ class ChefHelper
     @region = options.fetch(:awsregion, "us-east-1")
     Aws.use_bundled_cert!
     @credentials = Aws::Credentials.new(options[:awskey_id], options[:awskey])
-    logv "INIT: Credentials valid? #{@credentials.set?}"
     @s3 = Aws::S3::Client.new({credentials: @credentials, region: @region})
   end
   
@@ -58,7 +57,6 @@ class ChefHelper
   def find_bucket
     begin
       resp = @s3.head_bucket({bucket: @options[:s3_bucket]})
-      puts "Bucket found"
       return true
     rescue Aws::S3::Errors::Forbidden
       puts "Bucket name #{@options[:s3_bucket]} unavailable"
@@ -101,10 +99,11 @@ class ChefHelper
         return true if result.chomp == "complete"
         return false
       end
-    rescue Net::SSH::ConnectionTimeout
-      logv "SSH connection timeout. Attempt (#{try}/5)."
+    rescue => e
+      logv "SSH connection failed. Attempt (#{try}/10)."
+      logv e
       try +=1
-      retry if try < 6
+      retry if try < 11
     end
   end
   
@@ -112,7 +111,19 @@ class ChefHelper
     raise ArgumentError.new("Keyfile #{key_name}.pem not found") unless File.readable?("#{@options[:basedir]}/#{key_name}.pem")
     keys = File.read("#{@options[:basedir]}/#{key_name}.pem")
     Net::SSH.start(instance_ip, "ubuntu", keys: [], key_data: keys, keys_only: true) do |ssh|
-      ssh.scp.upload!("#{@options[:basedir]}/chef-repo", "/home/ubuntu/chef-repo", recursive: true)
+      ssh.scp.upload!("#{@options[:basedir]}/chef-repo", "/home/ubuntu", recursive: true)
+      output = ssh.exec!("if [ -e /home/ubuntu/caribou.pem ]; then mv /home/ubuntu/caribou.pem /home/ubuntu/chef-repo/.chef; fi")
+      output.each_line do |line|
+        logv "  > #{line}"
+      end
+      output = ssh.exec!("if [ -e /home/ubuntu/caribou-master.crt ]; then mkdir /home/ubuntu/chef-repo/.chef/trusted_certs; mv /home/ubuntu/caribou-master.crt /home/ubuntu/chef-repo/.chef/trusted_certs/caribou-master.crt; fi")
+      output.each_line do |line|
+        logv "  > #{line}"
+      end
+      output = ssh.exec!("cd /home/ubuntu/chef-repo; knife upload cookbooks/*; knife role from file roles/*")
+      output.each_line do |line|
+        logv "  > #{line}"
+      end
     end
       
   end
