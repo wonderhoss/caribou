@@ -26,6 +26,7 @@ list       - List all AWS regions available with the credentials provided
 getsgid    - Get the ID of the default AWS Security Group Caribou will use
 deploy_master - Deploy the Caribou Master Node
 master_status - Get the status of the currently deployed Caribou Master Node
+update-chef-repo - Upload the Chef Repository and register changed recipes with the server
 deploy_environment - Deploy an environment based on the corresponding JSON file
 shutdown   - Shutdown the Caribou Cluster
 
