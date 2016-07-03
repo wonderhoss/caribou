@@ -1,5 +1,7 @@
 # Caribou - An Extensible AWS deployment framework
 
+[![Build Status](http://aron.thepisymbol.info:8080/buildStatus/icon?job=Caribou "Jenkins Buils Status")](http://aron.thepisymbol.info:8080/job/Caribou/)
+
 ##Requirements
 Gems:
 * AWS SDK for Ruby v2
