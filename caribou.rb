@@ -7,25 +7,23 @@ include Verbose
 
 begin
   puts
-  puts "CARIBOU"
-  puts "-------"
+  puts 'CARIBOU'
+  puts '-------'
   puts
-  if ARGV.empty?
-    ARGV.unshift "-h"
-  end
-  
+  ARGV.unshift '-h' if ARGV.empty?
+
   @options = AwsParser.parse(ARGV)
-  if ARGV.length == 0
-    STDERR.puts "No command given. Try --help"
+  if ARGV.empty? 0
+    STDERR.puts 'No command given. Try --help'
     exit 1
   elsif ARGV.length > 1
-    STDERR.puts "Unknown command '#{ARGV.join(" ")}'"
+    STDERR.puts "Unknown command '#{ARGV.join(' ')}'"
     exit 1
   end
   @command = ARGV[0]
-  
+
   @verbose = @options[:verbose]
-  
+
   logv("Running command #{@command} with config:\n#{@options}")
   puts
 
@@ -34,38 +32,42 @@ begin
   helper = AwsHelper.new(@options)
   chef_helper = ChefHelper.new(@options)
   case @command
-  when "list"
-    puts "Available AWS Regions:"
+  when 'list'
+    puts 'Available AWS Regions:'
     regions = helper.listAwsRegions
-    puts "Failed to get regions from AWS" if regions.nil?
-    regions.each {|region| puts region}
+    puts 'Failed to get regions from AWS' if regions.nil?
+    regions.each { |region| puts region }
     exit
-  when "getsgid"
-    puts "Default Security Group:"
+  when 'getsgid'
+    puts 'Default Security Group:'
     id = helper.getSecurityGroupId(@options[:securitygroup_name])
     puts "Name: #{@options[:securitygroup_name]}"
     puts "ID:   #{id}"
     exit
-  when "deploy_master"
-    puts "Deploying Caribou Master Node"
-    ip = helper.deployMaster(@options[:securitygroup_name], @options[:key_name], @options[:master_instance_type], @options[:master_image_id], @options[:keymaterial])
+  when 'deploy_master'
+    puts 'Deploying Caribou Master Node'
+    ip = helper.deployMaster(@options[:securitygroup_name],
+                             @options[:key_name],
+                             @options[:master_instance_type],
+                             @options[:master_image_id],
+                             @options[:keymaterial])
     puts "Master Node successfully deployed with IP: #{ip}"
-  when "master_status"
-    puts helper.masterStatus()
-  when "shutdown"
-    puts "Shutting down Caribou Cluster"
+  when 'master_status'
+    puts helper.masterStatus
+  when 'shutdown'
+    puts 'Shutting down Caribou Cluster'
     puts
-    helper.shutdown()
-  when "update-chef-repo"
+    helper.shutdown
+  when 'update-chef-repo'
     node = helper.findMasterNode[0]
     if node.nil?
-      puts "ERROR: Master node not running"
+      puts 'ERROR: Master node not running'
       exit 1
     end
-    puts "Uploading chef repo to server"
+    puts 'Uploading chef repo to server'
     puts
     chef_helper.transfer_chef_repo(node.public_ip_address, @options[:key_name])
-  when "deploy_environment"
+  when 'deploy_environment'
     puts "Deploying Environment #{@options[:environment_name]}"
     puts
     helper.deployEnvironment(@options[:environment_name])
@@ -73,10 +75,9 @@ begin
     STDERR.puts "Unknown command '#{@command}'"
     exit 1
   end
-
-rescue OptionParser::ParseError => e
-  puts "#{e}"
-  exit 1
 rescue KeyValueParser::ParseError => fe
-  puts "#{fe}"
+  puts fe.to_s
+rescue OptionParser::ParseError => e
+  puts e.to_s
+  exit 1
 end

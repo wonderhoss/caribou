@@ -26,7 +26,6 @@ class AwsHelper
   def initialize(options = {})
     @verbose = options[:verbose]
     @basedir = options[:basedir]
-    
     if !options.has_key?(:awskey_id)
       raise ArgumentError.new("AWS Key ID required")
     elsif !options.has_key?(:awskey)
@@ -154,7 +153,7 @@ class AwsHelper
         exit 2
     end
     begin
-      environment = EnvironmentParser::parseEnv(File.read(env_filename))
+      environment = EnvironmentParser::parse_env(File.read(env_filename))
     rescue EnvironmentParser::EnvironmentParseError => e
       puts "Failed to parse environment description #{env_filename}: #{e}"
       exit 2
@@ -181,7 +180,7 @@ class AwsHelper
         swarm_instances = []
         swarm[:instance_count].times do |i|
           nodename = "caribou-#{environment_name}-#{swarm[:name]}-#{i}"
-          init_script = @chef_helper.get_node_cloudinit_script(master_ip, nodename, swarm[:role])
+          init_script = @chef_helper.node_cloudinit_script(master_ip, nodename, swarm[:role])
           run_result = @ec2.run_instances({
             image_id: swarm[:ami],
             min_count: 1,
@@ -314,7 +313,7 @@ class AwsHelper
         key_name: key[:name],
         security_group_ids: [group_id],
         instance_type: instance_type,
-        user_data: Base64.encode64(@chef_helper.get_master_cloudinit_script)
+        user_data: Base64.encode64(@chef_helper.master_cloudinit_script)
       })
       logv "Requested instance launch. Request ID is #{run_result.reservation_id}"
     rescue Aws::EC2::Errors::InvalidIPAddressInUse
