@@ -1,37 +1,36 @@
 AllCops:
   Exclude:
     - 'utils/aws_helper.rb'
+    - 'chef-repo/cookbooks/**/*'
+    
+Metrics/AbcSize:
+  Enabled: false
+
+Metrics/ClassLength:
+  Max: 150
+
+Metrics/CyclomaticComplexity:
+  Enabled: false
 
 Metrics/LineLength:
   Max: 120
 
-Style/RaiseArgs:
-  EnforcedStyle: compact
-
-Style/BracesAroundHashParameters:
-  EnforcedStyle: context_dependent
-  
-Style/IndentHash:
-  EnforcedStyle: consistent
-  
-Style/BracesAroundHashParameters:
-  EnforcedStyle: braces
-
 Metrics/MethodLength:
   Max: 80
-  
-Metrics/ClassLength:
-  Max: 150
+
+Metrics/PerceivedComplexity:
+  Enabled: false
+
+Style/BracesAroundHashParameters:
+  EnforcedStyle: braces
 
 Style/ClassVars:
   Exclude:
     - 'tests/utils/keyvalparser_test.rb'
+    - 'tests/utils/aws_helper_test.rb'
 
-Metrics/AbcSize:
-  Enabled: false
+Style/IndentHash:
+  EnforcedStyle: consistent
 
-Metrics/PerceivedComplexity:
-  Enabled: false
-  
-Metrics/CyclomaticComplexity:
-  Enabled: false
+Style/RaiseArgs:
+  EnforcedStyle: compact

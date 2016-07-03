@@ -4,8 +4,7 @@
 #
 # Copyright (c) 2016 The Authors, All Rights Reserved.
 
-include_recipe "tomcat::demoapp"
-
+include_recipe 'tomcat::demoapp'
 apt_update 'Update the apt cache daily' do
   frequency 86_400
   action :periodic
@@ -16,7 +15,7 @@ package 'libapache2-mod-jk'
 package 'unzip'
 
 service 'apache2' do
-  supports :status => true
+  supports status: true
   action [:enable, :start]
 end
 
