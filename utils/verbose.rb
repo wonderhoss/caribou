@@ -5,3 +5,4 @@ module Verbose
     puts message.to_s if !@verbose.nil? && @verbose
   end
 end
+
