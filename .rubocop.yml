@@ -1,0 +1,24 @@
+Metrics/LineLength:
+  Max: 120
+
+Style/RaiseArgs:
+  EnforcedStyle: compact
+
+Style/BracesAroundHashParameters:
+  EnforcedStyle: context_dependent
+  
+Style/IndentHash:
+  EnforcedStyle: consistent
+  
+Style/BracesAroundHashParameters:
+  EnforcedStyle: braces
+
+Metrics/MethodLength:
+  Max: 80
+
+Metrics/AbcSize:
+  Enabled: false
+
+Style/HashSyntax:
+  AllowHashRocketForSymbolicValues: true
+  

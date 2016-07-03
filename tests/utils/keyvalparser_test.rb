@@ -2,7 +2,7 @@ require_relative '../../utils/keyvalparse.rb'
 require 'minitest/autorun'
 require 'tmpdir'
 
-class TestKeyValueParser < Minitest::Unit::TestCase
+class TestKeyValueParser < Minitest::Spec
   
   testFile = File.new("#{Dir.tmpdir}/philrubytest.cfg", "w+")
   raise IOError("Failed to create test file") unless File.writable?(testFile)
@@ -32,14 +32,14 @@ class TestKeyValueParser < Minitest::Unit::TestCase
   end
   
   def test_parser_basic
-    options = KeyValueParser.parseFile(@@testFile)
+    options = KeyValueParser.parse_file(@@testFile)
     assert_kind_of Hash, options, "Parser did not return a hash."
     options.wont_be_empty
     options.size.must_equal 4, "Parser returned incorrect number of key/value pairs."
   end
   
   def test_parsed_options
-    options = KeyValueParser.parseFile(@@testFile)
+    options = KeyValueParser.parse_file(@@testFile)
     options.must_include :this
     options.must_include :thisis
     options.must_include :spaces

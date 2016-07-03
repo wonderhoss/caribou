@@ -26,7 +26,6 @@ class AwsHelper
   def initialize(options = {})
     @verbose = options[:verbose]
     @basedir = options[:basedir]
-    
     if !options.has_key?(:awskey_id)
       raise ArgumentError.new("AWS Key ID required")
     elsif !options.has_key?(:awskey)
